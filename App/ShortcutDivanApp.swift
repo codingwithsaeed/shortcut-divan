@@ -80,33 +80,17 @@ struct DivanWindow: View {
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $selected) {
-                SidebarRow(title: "All Shortcuts", symbol: "square.stack", count: total)
-                    .tag(Self.all)
-                SwiftUI.Section {
-                    ForEach(Array(store.sections.enumerated()), id: \.offset) { index, section in
-                        SidebarRow(
-                            title: LocalizedStringKey(section.title), verbatim: section.title,
-                            accent: section.accent, count: section.rows.filter { $0.only == nil }.count
-                        )
-                        .tag(section.title)
-                        .contextMenu { sectionMenu(index) }
-                    }
-                    Button { editing = .section(nil) } label: {
-                        Label {
-                            Text("New Section")
-                        } icon: {
-                            Image(systemName: "plus").frame(width: 16).foregroundStyle(.secondary)
-                        }
-                        .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                } header: {
-                    Text("Sections")
-                }
+            ScrollView {
+                SidebarCard(
+                    sections: store.sections, total: total, selected: $selected,
+                    add: { editing = .section(nil) }, menu: { sectionMenu($0) }
+                )
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
             }
+            .scrollIndicators(.never)
             .environment(\.layoutDirection, .app)
-            .navigationSplitViewColumnWidth(min: 200, ideal: 220)
+            .navigationSplitViewColumnWidth(min: 230, ideal: 250)
         } detail: {
             ScrollViewReader { proxy in
                 ScrollView {
@@ -479,25 +463,121 @@ enum Theme: String, CaseIterable {
     }
 }
 
-// Every sidebar row: a section's color dot (or a symbol), the name, and a count.
+// The sidebar as one glass card, like the section cards: a header with the section count,
+// add and more buttons, then All Shortcuts and a row per section.
+struct SidebarCard<Menu: View>: View {
+    let sections: [Section]
+    let total: Int
+    @Binding var selected: String?
+    let add: () -> Void
+    @ViewBuilder let menu: (Int) -> Menu
+    @Bindable private var store = Store.shared
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Text("Sections")
+                    .font(.system(size: 15, weight: .bold))
+                Text(verbatim: sections.count.formatted())
+                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(.fill.tertiary, in: Capsule())
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                GlassGroup {
+                    Button(action: add) { GlassIcon(symbol: "plus", size: 32) }
+                        .glassDisc()
+                        .focusable(false)
+                        .help("New Section")
+                    SwiftUI.Menu {
+                        Button("New Section", action: add)
+                        Divider()
+                        Button("Import…") { store.importFile() }
+                        Button("Export…") { store.exportFile() }
+                        Divider()
+                        Button("Follow a Shortcuts File…") { store.link() }
+                        if store.linkedFile != nil { Button("Stop Following File") { store.unlink() } }
+                        Divider()
+                        SettingsLink { Text("Settings") }
+                    } label: {
+                        GlassIcon(symbol: "ellipsis", size: 32)
+                    }
+                    .glassDisc()
+                    .focusable(false)
+                    .help("More")
+                }
+            }
+            .padding(.leading, 16)
+            .padding(.trailing, 12)
+            .padding(.vertical, 12)
+            .background(Color.rosePine("iris").opacity(0.12))
+
+            VStack(spacing: 2) {
+                SidebarRow(title: "All Shortcuts", symbol: "square.stack", count: total,
+                           picked: selected == nil || selected == DivanWindow.all) { selected = DivanWindow.all }
+                Divider().opacity(0.5).padding(.horizontal, 8).padding(.vertical, 4)
+                ForEach(Array(sections.enumerated()), id: \.offset) { index, section in
+                    SidebarRow(
+                        title: LocalizedStringKey(section.title), verbatim: section.title,
+                        accent: section.accent, count: section.rows.filter { $0.only == nil }.count,
+                        picked: selected == section.title
+                    ) { selected = section.title }
+                    .contextMenu { menu(index) }
+                }
+            }
+            .padding(8)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .glassCard(cornerRadius: 16)
+    }
+}
+
+// A sidebar row: a section's color dot (or a symbol), the name, and a count. The picked one
+// gets a band in its color, like a hovered shortcut row.
 struct SidebarRow: View {
     var title: LocalizedStringKey
     var verbatim: String?
     var symbol: String?
     var accent = "iris"
     let count: Int
+    let picked: Bool
+    let pick: () -> Void
+    @State private var hovering = false
 
     var body: some View {
-        Label {
-            if let verbatim { Text(verbatim: verbatim) } else { Text(title) }
-        } icon: {
-            if let symbol {
-                Image(systemName: symbol).foregroundStyle(.secondary).frame(width: 16)
-            } else {
-                Circle().fill(Color.rosePine(accent)).frame(width: 9, height: 9).frame(width: 16)
+        let color = Color.rosePine(accent)
+        Button(action: pick) {
+            HStack(spacing: 10) {
+                Group {
+                    if let symbol {
+                        Image(systemName: symbol).foregroundStyle(.secondary)
+                    } else {
+                        Circle().fill(color).frame(width: 9, height: 9)
+                    }
+                }
+                .frame(width: 16)
+                Group {
+                    if let verbatim { Text(verbatim: verbatim) } else { Text(title) }
+                }
+                .font(.system(size: 13.5, weight: picked ? .semibold : .regular))
+                .lineLimit(1)
+                Spacer(minLength: 4)
+                Text(verbatim: count.formatted())
+                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(.secondary)
             }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(color.opacity(picked ? 0.20 : hovering ? 0.10 : 0))
+            )
+            .contentShape(Rectangle())
         }
-        .badge(count)
+        .buttonStyle(.plain)
+        .focusable(false)
+        .onHover { hovering = $0 }
     }
 }
 

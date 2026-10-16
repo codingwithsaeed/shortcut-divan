@@ -57,7 +57,7 @@ struct Provider: AppIntentTimelineProvider {
     }
 
     // The chosen section, then the second one (or the next in the file), moved on by
-    // however many times the widget's next-section button was pressed.
+    // however many times the widget's previous- and next-section buttons were pressed.
     func entry(for configuration: SelectSection) -> Entry {
         let all = Shortcuts.load()
         let key = "\(configuration.section ?? "")|\(configuration.second ?? "")"
@@ -65,7 +65,8 @@ struct Provider: AppIntentTimelineProvider {
         guard !all.isEmpty else { return Entry(date: .now, sections: [], key: key, page: 0) }
         let first = all.firstIndex { $0.title == configuration.section } ?? 0
         let second = all.firstIndex { $0.title == configuration.second } ?? first + 1
-        let a = (first + position.shift) % all.count, b = (second + position.shift) % all.count
+        let wrap = { (index: Int) in (index % all.count + all.count) % all.count } // shift goes below 0 too
+        let a = wrap(first + position.shift), b = wrap(second + position.shift)
         let picked = a == b ? [a] : [a, b]
         return Entry(date: .now, sections: picked.map { all[$0] }, key: key, page: position.page)
     }
