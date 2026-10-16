@@ -9,15 +9,15 @@ cask "shortcut-divan" do
   desc "Keyboard shortcuts in a desktop widget"
   homepage "https://github.com/codingwithsaeed/shortcut-divan"
 
-  depends_on macos: ">= :sonoma"
+  depends_on macos: :sonoma
 
   app "Shortcut Divan.app"
 
   # Signed ad hoc, without an Apple Developer ID: without this, macOS refuses to open it the
   # first time. The widget registers when the app first opens.
-  postflight do
-    system_command "/usr/bin/xattr",
-                   args: ["-dr", "com.apple.quarantine", "#{appdir}/Shortcut Divan.app"]
+  postflight_steps do
+    run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{appdir}}/Shortcut Divan.app"],
+                          must_succeed: false
   end
 
   zap trash: [
