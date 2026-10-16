@@ -118,7 +118,7 @@ brew install xcodegen
 </div>
 
 ```sh
-gh release create v1.1.0 --target main --generate-notes
+gh release create v1.1.1 --target main --generate-notes
 ```
 
 <div dir="rtl">
