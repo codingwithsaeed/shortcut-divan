@@ -1,10 +1,11 @@
-# Compiles the app and widget on every push to develop and feature branches, so a change
-# is known to build before it's tried on a Mac.
+# Compiles the app and widget on every push to develop and work branches, so a change is
+# known to build before it's tried on a Mac, and keeps pictures of the widget at each size
+# (the "widget-previews" artifact).
 name: Build
 
 on:
   push:
-    branches: [develop, "feature/**", "fix/**"]
+    branches: [develop, "feature/**", "fix/**", "hotfix/**", "release/**"]
   pull_request:
 
 jobs:
@@ -20,3 +21,12 @@ jobs:
         run: |
           xcodebuild -project ShortcutDivan.xcodeproj -scheme ShortcutDivan -configuration Release \
             -destination 'platform=macOS' -derivedDataPath build build
+      - name: Widget previews
+        run: |
+          swiftc -parse-as-library -o preview scripts/preview/WidgetPreview.swift \
+            Widget/Views.swift Widget/Paging.swift Shared/*.swift
+          ./preview
+      - uses: actions/upload-artifact@v5
+        with:
+          name: widget-previews
+          path: previews/*.png
