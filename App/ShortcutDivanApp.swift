@@ -76,6 +76,8 @@ struct DivanWindow: View {
     @State private var editing: Editing?
     @State private var deleting: Editing?
 
+    @FocusState private var searching: Bool
+
     var body: some View {
         NavigationSplitView {
             List(selection: $selected) {
@@ -92,36 +94,24 @@ struct DivanWindow: View {
                     }
                     Button { editing = .section(nil) } label: {
                         Label {
-                            Text("New Section").foregroundStyle(.secondary)
+                            Text("New Section")
                         } icon: {
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .strokeBorder(.tertiary, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
-                                .frame(width: 24, height: 24)
-                                .overlay(Image(systemName: "plus").font(.system(size: 11, weight: .bold)).foregroundStyle(.secondary))
+                            Image(systemName: "plus").frame(width: 20).foregroundStyle(.secondary)
                         }
-                        .font(.system(size: 13, weight: .medium))
-                        .padding(.vertical, 3)
+                        .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
                 } header: {
                     Text("Sections")
                 }
             }
-            .safeAreaInset(edge: .top, spacing: 0) { AppHeader(count: total) }
-            .toolbar {
-                ToolbarItemGroup {
-                    ThemeButton()
-                    LanguageMenu()
-                    SettingsLink { Label("Settings", systemImage: "gearshape") }
-                        .help("Settings")
-                }
-            }
             .environment(\.layoutDirection, .app)
-            .navigationSplitViewColumnWidth(min: 240, ideal: 260)
+            .navigationSplitViewColumnWidth(min: 200, ideal: 220)
         } detail: {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 20) {
+                    LazyVStack(alignment: .leading, spacing: 22) {
+                        SearchField(text: $query, focus: $searching)
                         ForEach(shown, id: \.index) { item in
                             SectionTable(
                                 section: store.sections[item.index], index: item.index, rows: item.rows,
@@ -134,16 +124,31 @@ struct DivanWindow: View {
                             Text("Nothing matches “\(query)”.").foregroundStyle(.secondary)
                         }
                     }
-                    .padding(24)
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 28)
+                    .padding(.top, 6)
                     .environment(\.layoutDirection, .app)
                 }
                 .onChange(of: selected) { _, _ in
                     if let first = shown.first { proxy.scrollTo(store.sections[first.index].title, anchor: .top) }
                 }
             }
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    ControlGroup {
+                        ThemeButton()
+                        LanguageMenu()
+                        SettingsLink { Label("Settings", systemImage: "gearshape") }
+                            .help("Settings")
+                    }
+                }
+            }
         }
-        .navigationTitle(selected == nil || selected == Self.all ? String(localized: "All Shortcuts") : selected ?? "")
-        .searchable(text: $query, placement: .toolbar, prompt: Text("Search shortcuts"))
+        .navigationTitle("Shortcut Divan")
+        .hidingTitle()
+        .background {
+            Button("") { searching = true }.keyboardShortcut("f").hidden()
+        }
         .sheet(item: $editing) { editing in
             Group {
                 switch editing {
@@ -190,7 +195,7 @@ struct DivanWindow: View {
             query = ""
             selected = url.pathComponents.dropFirst().first
         }
-        .onExitCommand { NSApp.keyWindow?.close() }
+        .onExitCommand { if query.isEmpty { NSApp.keyWindow?.close() } else { query = "" } }
         .onAppear { Theme.current.apply() }
         .frame(minWidth: 680, minHeight: 480)
     }
@@ -229,7 +234,7 @@ struct DivanWindow: View {
     }
 }
 
-// A section as a card: title bar, column headers, then one row per shortcut with rules between.
+// A section as a card: a header with its name and actions, then one row per shortcut.
 struct SectionTable<Menu: View>: View {
     let section: Section
     let index: Int
@@ -242,15 +247,12 @@ struct SectionTable<Menu: View>: View {
         let accent = Color.rosePine(section.accent)
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                Circle().fill(accent).frame(width: 9, height: 9)
+                RoundedRectangle(cornerRadius: 2, style: .continuous).fill(accent).frame(width: 4, height: 16)
                 Text(verbatim: section.title)
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: 14, weight: .semibold))
                 Text(verbatim: rows.count.formatted())
-                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 2)
-                    .background(accent.opacity(0.15), in: Capsule())
-                    .foregroundStyle(accent)
+                    .font(.system(size: 12).monospacedDigit())
+                    .foregroundStyle(.secondary)
                 Spacer(minLength: 0)
                 GlassGroup {
                     Button("Add Shortcut", systemImage: "plus") { edit(.row(section: index, row: nil)) }
@@ -266,75 +268,66 @@ struct SectionTable<Menu: View>: View {
                         .fixedSize()
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(accent.opacity(0.12))
+            .padding(.leading, 14)
+            .padding(.trailing, 10)
+            .padding(.vertical, 8)
+
+            Divider()
 
             if rows.isEmpty {
                 Text("No shortcuts yet.")
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity)
-                    .padding(16)
+                    .padding(18)
             } else {
-                HStack(spacing: 16) {
-                    Text("Keys").frame(width: RowLine.keysWidth, alignment: .leading)
-                    Text("Description")
-                    Spacer(minLength: 0)
+                VStack(spacing: 0) {
+                    ForEach(Array(rows.enumerated()), id: \.element) { position, row in
+                        if position > 0 { Divider().opacity(0.5).padding(.horizontal, 14) }
+                        RowLine(
+                            shortcut: section.rows[row],
+                            edit: { edit(.row(section: index, row: row)) },
+                            delete: { delete(.row(section: index, row: row)) }
+                        )
+                    }
                 }
-                .font(.system(size: 11, weight: .semibold))
-                .textCase(.uppercase)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 7)
-                Divider()
-                ForEach(Array(rows.enumerated()), id: \.element) { position, row in
-                    if position > 0 { Divider().padding(.horizontal, 16) }
-                    RowLine(
-                        shortcut: section.rows[row], accent: accent,
-                        edit: { edit(.row(section: index, row: row)) },
-                        delete: { delete(.row(section: index, row: row)) }
-                    )
-                }
+                .padding(.vertical, 4)
             }
         }
-        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.separator))
+        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(.separator.opacity(0.6)))
     }
 }
 
-// One shortcut. Edit by double-click, the pencil, or right-click.
+// One shortcut: what it does, then its keys as keycaps. Edit by double-click, hover buttons, or right-click.
 struct RowLine: View {
-    static let keysWidth: CGFloat = 190
-
     let shortcut: Shortcut
-    let accent: Color
     let edit: () -> Void
     let delete: () -> Void
     @State private var hovering = false
 
     var body: some View {
-        HStack(spacing: 16) {
-            Text(verbatim: KeyText.spaced(shortcut.keys))
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(accent)
-                .environment(\.layoutDirection, .leftToRight) // keys read left to right, in Persian too
-                .frame(width: Self.keysWidth, alignment: .leading)
+        HStack(spacing: 12) {
             Text(verbatim: shortcut.desc)
-                .font(.system(size: 14))
+                .font(.system(size: 13.5))
                 .lineLimit(1)
-            Spacer(minLength: 0)
-            HStack(spacing: 10) {
+            Spacer(minLength: 12)
+            HStack(spacing: 2) {
                 Button("Edit", systemImage: "pencil", action: edit)
                 Button("Delete", systemImage: "trash", action: delete)
             }
             .labelStyle(.iconOnly)
             .buttonStyle(.borderless)
+            .foregroundStyle(.secondary)
             .opacity(hovering ? 1 : 0)
+            Keycaps(keys: shortcut.keys)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 9)
-        .background(hovering ? AnyShapeStyle(.quaternary.opacity(0.4)) : AnyShapeStyle(.clear))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(hovering ? AnyShapeStyle(.quaternary.opacity(0.5)) : AnyShapeStyle(.clear))
+                .padding(.horizontal, 4)
+        )
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .onTapGesture(count: 2, perform: edit)
@@ -342,6 +335,67 @@ struct RowLine: View {
             Button("Edit…", action: edit)
             Button("Delete", role: .destructive, action: delete)
         }
+    }
+}
+
+// "⇧⌘Z / ⌘Z" as ⇧ ⌘ Z keycaps, a slash, and ⌘ Z keycaps. Typed commands ("cd -") stay one cap.
+struct Keycaps: View {
+    let keys: String
+
+    enum Part: Hashable { case cap(String), gap, text(String) }
+
+    static let symbols: Set<Character> = ["⌃", "⌥", "⇧", "⌘", "⇥", "↩", "⎋", "⌫", "␣", "←", "→", "↑", "↓"]
+
+    static func parts(_ keys: String) -> [Part] {
+        var parts: [Part] = []
+        for (n, option) in keys.components(separatedBy: " / ").enumerated() {
+            if n > 0 { parts.append(.text("/")) }
+            guard option.contains(where: symbols.contains) else {
+                parts.append(.cap(option))
+                continue
+            }
+            for (w, word) in option.split(separator: " ").enumerated() {
+                if w > 0 { parts.append(.gap) }
+                var run = ""
+                for char in word {
+                    if symbols.contains(char) {
+                        if !run.isEmpty { parts.append(.cap(run)); run = "" }
+                        parts.append(.cap(char == "␣" ? "Space" : String(char)))
+                    } else {
+                        run.append(char)
+                    }
+                }
+                if !run.isEmpty { parts.append(.cap(run)) }
+            }
+        }
+        return parts
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(Array(Self.parts(keys).enumerated()), id: \.offset) { _, part in
+                switch part {
+                case let .cap(text):
+                    Text(verbatim: text)
+                        .font(.system(size: 12, weight: .medium, design: text.count > 1 && !text.contains(where: Self.symbols.contains) && text != "Space" ? .monospaced : .default))
+                        .frame(minWidth: 14)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(.quaternary.opacity(0.7), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .strokeBorder(.separator.opacity(0.8), lineWidth: 0.5)
+                        )
+                case .gap:
+                    Color.clear.frame(width: 4, height: 1)
+                case let .text(text):
+                    Text(verbatim: text).font(.system(size: 12)).foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .foregroundStyle(.primary.opacity(0.85))
+        .environment(\.layoutDirection, .leftToRight) // keys read left to right, in Persian too
+        .fixedSize()
     }
 }
 
@@ -451,27 +505,6 @@ enum Theme: String, CaseIterable {
     }
 }
 
-// Top of the sidebar: the app's icon, name, and how many shortcuts it holds.
-struct AppHeader: View {
-    let count: Int
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(nsImage: NSApp.applicationIconImage)
-                .resizable()
-                .frame(width: 44, height: 44)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Shortcut Divan").font(.system(size: 15, weight: .semibold))
-                Text("\(count) shortcuts").font(.system(size: 12)).foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 18)
-        .padding(.top, 4)
-        .padding(.bottom, 12)
-    }
-}
-
 // Every sidebar row: a colored tile with a white symbol, the name, and a count.
 struct SidebarRow: View {
     var title: LocalizedStringKey
@@ -484,14 +517,48 @@ struct SidebarRow: View {
         Label {
             if let verbatim { Text(verbatim: verbatim) } else { Text(title) }
         } icon: {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
                 .fill(Color.rosePine(accent).gradient)
-                .frame(width: 24, height: 24)
-                .overlay(Image(systemName: symbol).font(.system(size: 12, weight: .bold)).foregroundStyle(.white))
+                .frame(width: 20, height: 20)
+                .overlay(Image(systemName: symbol).font(.system(size: 10, weight: .bold)).foregroundStyle(.white))
         }
-        .font(.system(size: 13, weight: .medium))
         .badge(count)
-        .padding(.vertical, 3)
+    }
+}
+
+// A wide search field at the top of the list, as in launcher apps. ⌘F focuses it, ⎋ clears it.
+struct SearchField: View {
+    @Binding var text: String
+    var focus: FocusState<Bool>.Binding
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(.secondary)
+            TextField("Search shortcuts", text: $text)
+                .textFieldStyle(.plain)
+                .font(.system(size: 16))
+                .focused(focus)
+            if text.isEmpty {
+                Text(verbatim: "⌘F")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.tertiary)
+                    .environment(\.layoutDirection, .leftToRight)
+            } else {
+                Button("Clear", systemImage: "xmark.circle.fill") { text = "" }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 42)
+        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(focus.wrappedValue ? AnyShapeStyle(Color.accentColor.opacity(0.6)) : AnyShapeStyle(.separator.opacity(0.6)))
+        )
     }
 }
 
@@ -630,4 +697,11 @@ extension View {
 
 extension String {
     var trimmed: String { trimmingCharacters(in: .whitespacesAndNewlines) }
+}
+
+extension View {
+    // No title in the toolbar: the search field and the cards say where you are.
+    @ViewBuilder func hidingTitle() -> some View {
+        if #available(macOS 15, *) { toolbar(removing: .title) } else { self }
+    }
 }

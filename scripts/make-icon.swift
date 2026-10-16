@@ -1,7 +1,7 @@
 // Builds Resources/AppIcon.icon, an Icon Composer icon: macOS renders its layers as Liquid
 // Glass (light, dark, tinted and clear looks) and Xcode makes the older-macOS icon from it.
-//   back:  a sheet with lines of text (the divan)
-//   front: a keycap with ⌘ on it
+//   back:  a purple keycap, tilted
+//   front: a clear glass keycap with a pink ⌘
 // Run from the repo root after changing it: swift scripts/make-icon.swift
 import AppKit
 
@@ -37,66 +37,57 @@ func rotated(_ cg: CGContext, around center: CGPoint, degrees: CGFloat, _ draw: 
     cg.restoreGState()
 }
 
-// The sheet: a tall card, its text lines cut out so the glass shows through them.
-let sheet = CGRect(x: 214, y: 170, width: 440, height: 580)
-try layer("sheet.png") { cg in
-    rotated(cg, around: CGPoint(x: sheet.midX, y: sheet.midY), degrees: -8) {
-        cg.addPath(CGPath(roundedRect: sheet, cornerWidth: 64, cornerHeight: 64, transform: nil))
-        for (i, width) in [300, 250, 280, 190].enumerated() {
-            let line = CGRect(x: sheet.minX + 64, y: sheet.minY + 86 + CGFloat(i) * 70, width: CGFloat(width), height: 30)
-            cg.addPath(CGPath(roundedRect: line, cornerWidth: 15, cornerHeight: 15, transform: nil))
-        }
-        cg.fillPath(using: .evenOdd)
-    }
-}
-
-// The keycap, lower right, overlapping the sheet.
-let key = CGRect(x: 446, y: 430, width: 400, height: 400)
-try layer("key.png") { cg in
-    rotated(cg, around: CGPoint(x: key.midX, y: key.midY), degrees: 6) {
-        cg.addPath(CGPath(roundedRect: key, cornerWidth: 104, cornerHeight: 104, transform: nil))
+// Two keycaps on a dark ground: a tinted one behind, tilted, and a clear glass one in front.
+let back = CGRect(x: 170, y: 170, width: 440, height: 440)
+try layer("back.png") { cg in
+    rotated(cg, around: CGPoint(x: back.midX, y: back.midY), degrees: -12) {
+        cg.addPath(CGPath(roundedRect: back, cornerWidth: 112, cornerHeight: 112, transform: nil))
         cg.fillPath()
     }
 }
 
-// ⌘ on the key.
+let key = CGRect(x: 372, y: 372, width: 480, height: 480)
+try layer("key.png") { cg in
+    cg.addPath(CGPath(roundedRect: key, cornerWidth: 122, cornerHeight: 122, transform: nil))
+    cg.fillPath()
+}
+
+// ⌘ on the front key.
 try layer("command.png") { cg in
-    rotated(cg, around: CGPoint(x: key.midX, y: key.midY), degrees: 6) {
-        let font = NSFont.systemFont(ofSize: 250, weight: .semibold)
-        let glyph = NSAttributedString(string: "⌘", attributes: [.font: font, .foregroundColor: NSColor.white])
-        let size = glyph.size()
-        // NSString drawing expects a flipped context here.
-        NSGraphicsContext.current = NSGraphicsContext(cgContext: cg, flipped: true)
-        glyph.draw(at: NSPoint(x: key.midX - size.width / 2, y: key.midY - size.height / 2 - 6))
-    }
+    let font = NSFont.systemFont(ofSize: 300, weight: .bold)
+    let glyph = NSAttributedString(string: "⌘", attributes: [.font: font, .foregroundColor: NSColor.white])
+    let size = glyph.size()
+    // NSString drawing expects a flipped context here.
+    NSGraphicsContext.current = NSGraphicsContext(cgContext: cg, flipped: true)
+    glyph.draw(at: NSPoint(x: key.midX - size.width / 2, y: key.midY - size.height / 2 - 8))
 }
 
 let icon: [String: Any] = [
     "fill": [
-        "linear-gradient": ["display-p3:0.52941,0.38431,0.85098,1.00000", "display-p3:0.92157,0.38039,0.56471,1.00000"],
-        "orientation": ["start": ["x": 0.2, "y": 0], "stop": ["x": 0.8, "y": 1]],
+        "linear-gradient": ["display-p3:0.17255,0.12157,0.29412,1.00000", "display-p3:0.06667,0.05098,0.12157,1.00000"],
+        "orientation": ["start": ["x": 0.5, "y": 0], "stop": ["x": 0.5, "y": 1]],
     ],
     "groups": [
         [
-            "name": "Key",
+            "name": "Front",
             "layers": [
                 ["name": "Command", "image-name": "command.png", "glass": false,
-                 "fill": ["solid": "display-p3:0.33725,0.20392,0.56078,1.00000"]],
+                 "fill": ["automatic-gradient": "display-p3:0.92157,0.38039,0.56471,1.00000"]],
                 ["name": "Key", "image-name": "key.png", "glass": true,
-                 "fill": ["automatic-gradient": "display-p3:1.00000,1.00000,1.00000,0.90000"]],
+                 "fill": ["automatic-gradient": "display-p3:1.00000,1.00000,1.00000,0.85000"]],
             ],
-            "shadow": ["kind": "layer-color", "opacity": 0.5],
-            "translucency": ["enabled": true, "value": 0.25],
+            "shadow": ["kind": "neutral", "opacity": 0.6],
+            "translucency": ["enabled": true, "value": 0.3],
             "specular": true,
         ],
         [
-            "name": "Sheet",
+            "name": "Back",
             "layers": [
-                ["name": "Sheet", "image-name": "sheet.png", "glass": true,
-                 "fill": ["automatic-gradient": "display-p3:1.00000,0.96078,0.92157,1.00000"]],
+                ["name": "Back", "image-name": "back.png", "glass": true,
+                 "fill": ["automatic-gradient": "display-p3:0.61961,0.40000,0.95686,1.00000"]],
             ],
-            "shadow": ["kind": "neutral", "opacity": 0.35],
-            "translucency": ["enabled": true, "value": 0.45],
+            "shadow": ["kind": "layer-color", "opacity": 0.5],
+            "translucency": ["enabled": true, "value": 0.2],
             "specular": true,
         ],
     ],

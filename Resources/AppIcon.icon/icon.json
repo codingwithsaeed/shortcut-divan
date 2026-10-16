@@ -1,16 +1,16 @@
 {
   "fill" : {
     "linear-gradient" : [
-      "display-p3:0.52941,0.38431,0.85098,1.00000",
-      "display-p3:0.92157,0.38039,0.56471,1.00000"
+      "display-p3:0.17255,0.12157,0.29412,1.00000",
+      "display-p3:0.06667,0.05098,0.12157,1.00000"
     ],
     "orientation" : {
       "start" : {
-        "x" : 0.20000000000000001,
+        "x" : 0.5,
         "y" : 0
       },
       "stop" : {
-        "x" : 0.80000000000000004,
+        "x" : 0.5,
         "y" : 1
       }
     }
@@ -20,7 +20,7 @@
       "layers" : [
         {
           "fill" : {
-            "solid" : "display-p3:0.33725,0.20392,0.56078,1.00000"
+            "automatic-gradient" : "display-p3:0.92157,0.38039,0.56471,1.00000"
           },
           "glass" : false,
           "image-name" : "command.png",
@@ -28,14 +28,36 @@
         },
         {
           "fill" : {
-            "automatic-gradient" : "display-p3:1.00000,1.00000,1.00000,0.90000"
+            "automatic-gradient" : "display-p3:1.00000,1.00000,1.00000,0.85000"
           },
           "glass" : true,
           "image-name" : "key.png",
           "name" : "Key"
         }
       ],
-      "name" : "Key",
+      "name" : "Front",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.59999999999999998
+      },
+      "specular" : true,
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.29999999999999999
+      }
+    },
+    {
+      "layers" : [
+        {
+          "fill" : {
+            "automatic-gradient" : "display-p3:0.61961,0.40000,0.95686,1.00000"
+          },
+          "glass" : true,
+          "image-name" : "back.png",
+          "name" : "Back"
+        }
+      ],
+      "name" : "Back",
       "shadow" : {
         "kind" : "layer-color",
         "opacity" : 0.5
@@ -43,29 +65,7 @@
       "specular" : true,
       "translucency" : {
         "enabled" : true,
-        "value" : 0.25
-      }
-    },
-    {
-      "layers" : [
-        {
-          "fill" : {
-            "automatic-gradient" : "display-p3:1.00000,0.96078,0.92157,1.00000"
-          },
-          "glass" : true,
-          "image-name" : "sheet.png",
-          "name" : "Sheet"
-        }
-      ],
-      "name" : "Sheet",
-      "shadow" : {
-        "kind" : "neutral",
-        "opacity" : 0.34999999999999998
-      },
-      "specular" : true,
-      "translucency" : {
-        "enabled" : true,
-        "value" : 0.45000000000000001
+        "value" : 0.20000000000000001
       }
     }
   ],

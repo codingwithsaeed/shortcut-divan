@@ -1,7 +1,26 @@
 {
   "sourceLanguage": "en",
-  "version": "1.0",
   "strings": {
+    "%lld shortcuts": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld میان‌بر"
+          }
+        }
+      }
+    },
+    "A followed file is read, watched for changes, and saved back to when you edit here.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فایلی که دنبالش می‌کنید خوانده می‌شود، تغییراتش دنبال می‌شود و ویرایش‌های اینجا در همان ذخیره می‌شود."
+          }
+        }
+      }
+    },
     "Add Shortcut": {
       "localizations": {
         "fa": {
@@ -28,6 +47,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "افزودن میان‌بر به این بخش"
+          }
+        }
+      }
+    },
+    "All Shortcuts": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "همهٔ میان‌برها"
+          }
+        }
+      }
+    },
+    "Appearance": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ظاهر"
+          }
+        }
+      }
+    },
+    "Automatic": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "خودکار"
           }
         }
       }
@@ -62,6 +111,16 @@
         }
       }
     },
+    "Clear": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پاک کردن"
+          }
+        }
+      }
+    },
     "Color": {
       "localizations": {
         "fa": {
@@ -88,6 +147,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ذخیره ممکن نشد: %@"
+          }
+        }
+      }
+    },
+    "Dark": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تیره"
           }
         }
       }
@@ -242,12 +311,52 @@
         }
       }
     },
+    "Kept by the app": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "در خود برنامه نگه داشته می‌شود"
+          }
+        }
+      }
+    },
     "Keys": {
       "localizations": {
         "fa": {
           "stringUnit": {
             "state": "translated",
             "value": "کلیدها"
+          }
+        }
+      }
+    },
+    "Language": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "زبان"
+          }
+        }
+      }
+    },
+    "Light": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "روشن"
+          }
+        }
+      }
+    },
+    "More": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بیشتر"
           }
         }
       }
@@ -422,12 +531,42 @@
         }
       }
     },
+    "Sections": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بخش‌ها"
+          }
+        }
+      }
+    },
+    "Settings": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تنظیمات"
+          }
+        }
+      }
+    },
     "Shortcut Divan": {
       "localizations": {
         "fa": {
           "stringUnit": {
             "state": "translated",
             "value": "دیوان میان‌بر"
+          }
+        }
+      }
+    },
+    "Shortcuts File": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فایل میان‌برها"
           }
         }
       }
@@ -472,12 +611,32 @@
         }
       }
     },
+    "System": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "زبان سیستم"
+          }
+        }
+      }
+    },
     "Teal": {
       "localizations": {
         "fa": {
           "stringUnit": {
             "state": "translated",
             "value": "فیروزه‌ای"
+          }
+        }
+      }
+    },
+    "Theme": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم"
           }
         }
       }
@@ -541,156 +700,7 @@
           }
         }
       }
-    },
-    "Theme": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تم"
-          }
-        }
-      }
-    },
-    "Automatic": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "خودکار"
-          }
-        }
-      }
-    },
-    "Light": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "روشن"
-          }
-        }
-      }
-    },
-    "Dark": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تیره"
-          }
-        }
-      }
-    },
-    "Language": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "زبان"
-          }
-        }
-      }
-    },
-    "System": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "زبان سیستم"
-          }
-        }
-      }
-    },
-    "More": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "بیشتر"
-          }
-        }
-      }
-    },
-    "Sections": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "بخش‌ها"
-          }
-        }
-      }
-    },
-    "Settings": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تنظیمات"
-          }
-        }
-      }
-    },
-    "%lld shortcuts": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld میان‌بر"
-          }
-        }
-      }
-    },
-    "All Shortcuts": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "همهٔ میان‌برها"
-          }
-        }
-      }
-    },
-    "Appearance": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ظاهر"
-          }
-        }
-      }
-    },
-    "Shortcuts File": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "فایل میان‌برها"
-          }
-        }
-      }
-    },
-    "Kept by the app": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "در خود برنامه نگه داشته می‌شود"
-          }
-        }
-      }
-    },
-    "A followed file is read, watched for changes, and saved back to when you edit here.": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "فایلی که دنبالش می‌کنید خوانده می‌شود، تغییراتش دنبال می‌شود و ویرایش‌های اینجا در همان ذخیره می‌شود."
-          }
-        }
-      }
     }
-  }
+  },
+  "version": "1.0"
 }
