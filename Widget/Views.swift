@@ -20,9 +20,9 @@ struct Style {
 
     init(_ family: WidgetFamily) {
         switch family {
-        case .systemSmall: (font, spacing, maxRows, columns, rules) = (11, 6, 4, 1, false)
-        case .systemMedium: (font, spacing, maxRows, columns, rules) = (11.5, 6, 10, 2, false)
-        default: (font, spacing, maxRows, columns, rules) = (13, 7, 10, 1, true)
+        case .systemSmall: (font, spacing, maxRows, columns, rules) = (11, 5, 4, 1, false)
+        case .systemMedium: (font, spacing, maxRows, columns, rules) = (12, 5, 4, 1, true)
+        default: (font, spacing, maxRows, columns, rules) = (13, 6, 10, 1, true)
         }
     }
 }
@@ -40,17 +40,21 @@ struct SectionView: View {
 
         VStack(alignment: .leading, spacing: style.spacing + 3) {
             HStack(spacing: 6) {
-                Circle().frame(width: style.font * 0.6, height: style.font * 0.6)
-                Text(section.title.uppercased())
-                    .font(.system(size: style.font, weight: .heavy))
-                    .tracking(style.font * 0.08)
+                Circle().fill(accent).frame(width: style.font * 0.6, height: style.font * 0.6)
+                Text(verbatim: section.title)
+                    .font(.system(size: style.font + 2, weight: .bold))
                     .lineLimit(1)
+                Text(verbatim: section.rows.count.formatted())
+                    .font(.system(size: style.font - 2, weight: .semibold).monospacedDigit())
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 1)
+                    .background(accent.opacity(0.18), in: Capsule())
+                    .foregroundStyle(accent)
                 if !style.footer {
                     Spacer(minLength: 4)
                     controls
                 }
             }
-            .foregroundStyle(accent)
             .widgetAccentable()
 
             HStack(alignment: .top, spacing: 14) {
@@ -72,7 +76,6 @@ struct SectionView: View {
                     Spacer(minLength: 0)
                     controls
                 }
-                .foregroundStyle(accent)
                 .widgetAccentable()
             }
         }
@@ -104,34 +107,30 @@ struct IconButton<Intent: AppIntent>: View {
     var body: some View {
         Button(intent: intent) {
             Image(systemName: symbol)
-                .font(.system(size: size - 1, weight: .bold))
-                .frame(width: size + 7, height: size + 7)
-                .background(.quaternary, in: Circle())
+                .font(.system(size: size - 2, weight: .semibold))
+                .frame(width: size + 10, height: size + 10)
+                .background(.fill.tertiary, in: Circle())
+                .overlay(Circle().strokeBorder(.separator, lineWidth: 0.5))
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
     }
 }
 
+// What it does, then its keys as keycaps, as in the app.
 struct RowView: View {
     let row: Shortcut
     let accent: Color
     let size: CGFloat
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Text(verbatim: KeyText.spaced(row.keys))
-                .environment(\.layoutDirection, .leftToRight)
-                .font(.system(size: size * 1.25, weight: .semibold))
-                .foregroundStyle(accent)
-                .widgetAccentable()
-                .lineLimit(1)
-                .fixedSize()
-            Spacer(minLength: 0)
+        HStack(spacing: 8) {
             Text(verbatim: row.desc)
                 .font(.system(size: size, weight: .medium))
-                .foregroundStyle(.secondary)
                 .lineLimit(1)
+            Spacer(minLength: 4)
+            Keycaps(keys: row.keys, accent: accent, size: size - 1)
+                .widgetAccentable()
         }
     }
 }
@@ -144,7 +143,14 @@ struct DivanView: View {
         SectionsContent(entry: entry, family: family)
             .environment(\.layoutDirection, .app)
             .environment(\.locale, Locale(identifier: AppLanguage.current))
-            .containerBackground(.background, for: .widget)
+            .containerBackground(for: .widget) {
+                ZStack {
+                    Rectangle().fill(.background)
+                    LinearGradient(
+                        colors: [Color.rosePine(entry.sections.first?.accent ?? "iris").opacity(0.16), .clear],
+                        startPoint: .top, endPoint: .bottom)
+                }
+            }
             .widgetURL(link)
     }
 
