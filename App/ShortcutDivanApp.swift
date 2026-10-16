@@ -82,6 +82,7 @@ struct DivanWindow: View {
 
     @FocusState private var searching: Bool
     @State private var sidebarShown = true
+    @AppStorage("sidebarWidth") private var sidebarWidth: Double = 250
     @State private var columnWidth: CGFloat = 0
     @State private var contentWidth: CGFloat = 0
 
@@ -106,7 +107,7 @@ struct DivanWindow: View {
                         .padding(.bottom, 12)
                     }
                     .scrollIndicators(.never)
-                    .frame(width: Self.sidebarWidth)
+                    .frame(width: sidebarWidth)
                     .transition(.move(edge: .leading).combined(with: .opacity))
                     Color.clear.frame(width: 1)
                 }
@@ -153,19 +154,24 @@ struct DivanWindow: View {
                 }
                 .allowsHitTesting(false)
             if sidebarShown {
-                Rectangle()
-                    .fill(.separator)
-                    .frame(width: 1)
-                    .shadow(color: .black.opacity(0.12), radius: 6)
-                    .padding(.leading, Self.sidebarWidth)
-                    .allowsHitTesting(false)
+                // The sidebar's edge: a clear line, and a shadow cast onto the cards' side as if
+                // the sidebar sat a step higher. Drag it to resize the sidebar.
+                HStack(spacing: 0) {
+                    Rectangle().fill(Color.primary.opacity(0.16)).frame(width: 1)
+                    LinearGradient(colors: [.black.opacity(0.16), .clear], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: 14)
+                        .allowsHitTesting(false)
+                }
+                .padding(.leading, sidebarWidth)
+                SidebarResizer(width: $sidebarWidth)
+                    .padding(.leading, sidebarWidth - 4)
             }
             if sidebarShown {
                 // The strip above the sidebar card moves the window too.
-                Color.clear.frame(width: Self.sidebarWidth, height: Self.barHeight).movesWindow()
+                Color.clear.frame(width: sidebarWidth, height: Self.barHeight).movesWindow()
             }
             topBar
-                .padding(.leading, sidebarShown ? Self.sidebarWidth + 1 : 0)
+                .padding(.leading, sidebarShown ? sidebarWidth + 1 : 0)
         }
         .environment(\.layoutDirection, .app)
         .ignoresSafeArea(.container, edges: .top)
@@ -231,7 +237,6 @@ struct DivanWindow: View {
     // keeps clear of the window buttons.
     static let barHeight: CGFloat = 10 + SearchField.height + 8
     static let cardsTop = barHeight + 10 // where the first card and the sidebar card start
-    static let sidebarWidth: CGFloat = 250
 
     var topBar: some View {
         HStack(spacing: 12) {
@@ -637,6 +642,36 @@ struct SectionDrop: DropDelegate {
         guard let from = dragging, from != index else { return false }
         move(from, index)
         return true
+    }
+}
+
+// A thin handle over the sidebar's edge: drag to resize the sidebar, kept between a width that
+// still fits the header buttons and one that leaves the cards room.
+struct SidebarResizer: View {
+    @Binding var width: Double
+    @State private var start: Double?
+
+    static let range = 220.0...380.0
+
+    var body: some View {
+        Color.clear
+            .frame(width: 9)
+            .contentShape(Rectangle())
+            .onHover { inside in
+                if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
+            }
+            .gesture(
+                // Screen coordinates, so the direction is the same in both layouts; in Persian
+                // the sidebar is on the right and grows to the left.
+                DragGesture(minimumDistance: 1, coordinateSpace: .global)
+                    .onChanged { drag in
+                        let from = start ?? width
+                        start = from
+                        let delta = LayoutDirection.app == .rightToLeft ? -drag.translation.width : drag.translation.width
+                        width = min(max(from + delta, Self.range.lowerBound), Self.range.upperBound)
+                    }
+                    .onEnded { _ in start = nil }
+            )
     }
 }
 
