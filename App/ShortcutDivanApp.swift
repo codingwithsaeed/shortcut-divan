@@ -697,7 +697,7 @@ struct TrafficLights: NSViewRepresentable {
         var centerY: CGFloat = 28
         private var observers: [NSObjectProtocol] = []
         private var watched: Set<ObjectIdentifier> = []
-        private var appearance: NSKeyValueObservation?
+        private var themeWatch: NSKeyValueObservation?
         private var placing = false
 
         override func viewDidMoveToWindow() {
@@ -705,7 +705,7 @@ struct TrafficLights: NSViewRepresentable {
             observers.forEach(NotificationCenter.default.removeObserver)
             observers = []
             watched = []
-            appearance = nil
+            themeWatch = nil
             guard let window else { return }
             let names: [Notification.Name] = [
                 NSWindow.didResizeNotification, NSWindow.didEndLiveResizeNotification,
@@ -716,7 +716,7 @@ struct TrafficLights: NSViewRepresentable {
                 observe(name, of: window)
             }
             // Switching light and dark lays the title bar out again, back at its own height.
-            appearance = NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
+            themeWatch = NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
                 DispatchQueue.main.async { self?.place() }
             }
             DispatchQueue.main.async { self.place() }
