@@ -46,6 +46,7 @@ struct ShortcutDivanApp: App {
                 Button("Stop Following File") { store.unlink() }
                     .disabled(store.linkedFile == nil)
                 Divider()
+                Button("Add Missing Default Shortcuts") { store.addMissingDefaults() }
                 Button("Restore Default Shortcuts…") { store.restoreDefaults() }
             }
         }
@@ -301,6 +302,8 @@ struct DivanWindow: View {
                     Divider()
                     Button("Follow a Shortcuts File…") { store.link() }
                     if store.linkedFile != nil { Button("Stop Following File") { store.unlink() } }
+                    Divider()
+                    Button("Add Missing Default Shortcuts") { store.addMissingDefaults() }
                 } label: {
                     GlassIcon(symbol: "ellipsis", size: Self.smallDisc)
                 }

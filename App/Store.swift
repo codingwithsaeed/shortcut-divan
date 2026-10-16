@@ -104,6 +104,37 @@ final class Store {
         commit()
     }
 
+    // Adds the default shortcuts you don't have yet: into your section of the same name (in
+    // either language), or as a new section. Nothing of yours changes or moves; a shortcut
+    // counts as had when its keys are already in that section.
+    func addMissingDefaults() {
+        guard let url = Shortcuts.defaultsFile, let defaults = read(url) else { return }
+        let translations = ["en", "fa"].compactMap {
+            Bundle.main.url(forResource: "Defaults", withExtension: "json", subdirectory: nil, localization: $0)
+        }.compactMap { try? Shortcuts.decode(Data(contentsOf: $0)) }
+        func plain(_ keys: String) -> String { keys.filter { !$0.isWhitespace } }
+        var added = 0
+        for (index, section) in defaults.enumerated() {
+            let names = Set(([section] + translations.compactMap { $0.indices.contains(index) ? $0[index] : nil })
+                .map { $0.title.lowercased() })
+            if let mine = sections.firstIndex(where: { names.contains($0.title.lowercased()) }) {
+                let had = Set(sections[mine].rows.map { plain($0.keys) })
+                let missing = section.rows.filter { !had.contains(plain($0.keys)) }
+                sections[mine].rows += missing
+                added += missing.count
+            } else {
+                sections.append(section)
+                added += section.rows.count
+            }
+        }
+        if added > 0 { commit() }
+        let alert = NSAlert()
+        alert.messageText = added > 0
+            ? String(localized: "Added \(added) default shortcuts.")
+            : String(localized: "You already have all the default shortcuts.")
+        alert.runModal()
+    }
+
     // MARK: helpers
 
     private func read(_ url: URL) -> [Section]? {
