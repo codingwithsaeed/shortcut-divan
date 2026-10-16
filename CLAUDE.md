@@ -43,15 +43,16 @@ right-to-left layout in Persian (keycaps still read left to right). See README.m
 
 - Alignment matters a lot to the owner. Edges line up across the window: the top bar's
   first and last buttons with the cards' edges (also when a scroll bar shows, and in
-  right-to-left), the sidebar's first row with the search field, header buttons with the
+  right-to-left), the sidebar's first row with the search field, the sidebar header with the header row, header buttons with the
   keycaps below them. Check every change for this before pushing.
 - One look everywhere: the Rosé Pine backdrop, glass cards and round glass buttons; text
   buttons use `TintButtonStyle`, key symbols look like keycaps. New windows and sheets use
   `appLook()`.
-- Window layout follows Telegram (the owner's reference): one header row across the window,
-  level with the window buttons (`TrafficLights` moves them there); a flat sidebar on the same
-  backdrop, parted by one straight line; the search field pinned below the header. No panels
-  or cards around the sidebar.
+- Window layout: the sidebar is a glass card inset from the window with rounded corners; the
+  window buttons sit inside its top corner (`TrafficLights` moves them there), next to the
+  app's name; each sidebar row is a small card. Beside it: one header row level with the
+  window buttons, then the search field (level with the sidebar's first row), pinned, with
+  the section cards scrolling under them.
 - Latin text uses Inter (`Font.app`, bundled in `Resources/Fonts`); Persian falls back to the
   system font; typed commands in keycaps stay monospaced. Icons use SF Symbols at a readable
   size (`GlassIcon`).
