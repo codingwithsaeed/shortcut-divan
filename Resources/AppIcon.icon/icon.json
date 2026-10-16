@@ -1,0 +1,77 @@
+{
+  "fill" : {
+    "linear-gradient" : [
+      "display-p3:0.52941,0.38431,0.85098,1.00000",
+      "display-p3:0.92157,0.38039,0.56471,1.00000"
+    ],
+    "orientation" : {
+      "start" : {
+        "x" : 0.20000000000000001,
+        "y" : 0
+      },
+      "stop" : {
+        "x" : 0.80000000000000004,
+        "y" : 1
+      }
+    }
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "fill" : {
+            "solid" : "display-p3:0.33725,0.20392,0.56078,1.00000"
+          },
+          "glass" : false,
+          "image-name" : "command.png",
+          "name" : "Command"
+        },
+        {
+          "fill" : {
+            "automatic-gradient" : "display-p3:1.00000,1.00000,1.00000,0.90000"
+          },
+          "glass" : true,
+          "image-name" : "key.png",
+          "name" : "Key"
+        }
+      ],
+      "name" : "Key",
+      "shadow" : {
+        "kind" : "layer-color",
+        "opacity" : 0.5
+      },
+      "specular" : true,
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.25
+      }
+    },
+    {
+      "layers" : [
+        {
+          "fill" : {
+            "automatic-gradient" : "display-p3:1.00000,0.96078,0.92157,1.00000"
+          },
+          "glass" : true,
+          "image-name" : "sheet.png",
+          "name" : "Sheet"
+        }
+      ],
+      "name" : "Sheet",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.34999999999999998
+      },
+      "specular" : true,
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.45000000000000001
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : [
+      "macOS"
+    ]
+  }
+}
