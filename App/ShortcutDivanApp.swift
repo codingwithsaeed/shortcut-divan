@@ -114,11 +114,10 @@ struct DivanWindow: View {
                         HStack(spacing: 12) {
                             SearchField(text: $query, focus: $searching)
                             GlassGroup {
-                                ThemeButton().labelStyle(.iconOnly).glassCircle()
-                                LanguageMenu().labelStyle(.iconOnly).menuIndicator(.hidden).glassCircle()
-                                SettingsLink { Label("Settings", systemImage: "gearshape") }
-                                    .labelStyle(.iconOnly)
-                                    .glassCircle()
+                                ThemeButton(size: SearchField.height)
+                                LanguageMenu(size: SearchField.height)
+                                SettingsLink { GlassIcon(symbol: "gearshape", size: SearchField.height) }
+                                    .glassDisc()
                                     .help("Settings")
                             }
                             .focusable(false)
@@ -260,17 +259,14 @@ struct SectionTable<Menu: View>: View {
                     .foregroundStyle(accent)
                 Spacer(minLength: 0)
                 GlassGroup {
-                    Button("Add Shortcut", systemImage: "plus") { edit(.row(section: index, row: nil)) }
-                        .labelStyle(.iconOnly)
-                        .glassCircle()
+                    Button { edit(.row(section: index, row: nil)) } label: { GlassIcon(symbol: "plus", size: 32) }
+                        .glassDisc()
                         .focusable(false)
                         .help("Add a shortcut to this section")
-                    SwiftUI.Menu { menu() } label: { Label("More", systemImage: "ellipsis") }
-                        .labelStyle(.iconOnly)
-                        .menuIndicator(.hidden)
-                        .glassCircle()
+                    SwiftUI.Menu { menu() } label: { GlassIcon(symbol: "ellipsis", size: 32) }
+                        .glassDisc()
                         .focusable(false)
-                        .fixedSize()
+                        .help("More")
                 }
             }
             .padding(.horizontal, 16)
@@ -543,6 +539,8 @@ struct SidebarRow: View {
 
 // A wide search field at the top of the list, as in launcher apps. ⌘F focuses it, ⎋ clears it.
 struct SearchField: View {
+    static let height: CGFloat = 42
+
     @Binding var text: String
     var focus: FocusState<Bool>.Binding
 
@@ -568,13 +566,14 @@ struct SearchField: View {
             }
         }
         .padding(.horizontal, 14)
-        .frame(height: 42)
-        .glassCard(cornerRadius: 21)
+        .frame(height: Self.height)
+        .glassCard(cornerRadius: Self.height / 2)
     }
 }
 
 // Cycles automatic → light → dark.
 struct ThemeButton: View {
+    let size: CGFloat
     @State private var theme = Theme.current
 
     var body: some View {
@@ -582,14 +581,17 @@ struct ThemeButton: View {
             theme = theme.next
             theme.apply()
         } label: {
-            Label("Theme", systemImage: theme.symbol)
+            GlassIcon(symbol: theme.symbol, size: size)
                 .contentTransition(.symbolEffect(.replace))
         }
+        .glassDisc()
         .help(theme.name)
     }
 }
 
 struct LanguageMenu: View {
+    let size: CGFloat
+
     var body: some View {
         Menu {
             Picker("Language", selection: Binding { AppLanguage.chosen ?? "" } set: { LanguageSwitch.to($0) }) {
@@ -599,9 +601,9 @@ struct LanguageMenu: View {
             }
             .pickerStyle(.inline)
         } label: {
-            Label("Language", systemImage: "globe")
+            GlassIcon(symbol: "globe", size: size)
         }
-        .fixedSize()
+        .glassDisc()
         .help("Language")
     }
 }
@@ -696,16 +698,6 @@ struct GlassGroup<Content: View>: View {
     }
 }
 
-extension View {
-    @ViewBuilder func glassCircle() -> some View {
-        if #available(macOS 26, *) {
-            buttonStyle(.glass).buttonBorderShape(.circle).controlSize(.large)
-        } else {
-            buttonStyle(.borderless)
-        }
-    }
-}
-
 extension String {
     var trimmed: String { trimmingCharacters(in: .whitespacesAndNewlines) }
 }
@@ -734,13 +726,38 @@ struct Backdrop: View {
     var body: some View {
         ZStack {
             Rectangle().fill(.background)
-            Circle().fill(Color.rosePine("iris").opacity(0.22)).frame(width: 520).blur(radius: 120)
+            Circle().fill(Color.rosePine("iris").opacity(0.45)).frame(width: 560).blur(radius: 120)
                 .offset(x: -220, y: -200)
-            Circle().fill(Color.rosePine("rose").opacity(0.20)).frame(width: 460).blur(radius: 120)
+            Circle().fill(Color.rosePine("love").opacity(0.35)).frame(width: 500).blur(radius: 120)
                 .offset(x: 260, y: 60)
-            Circle().fill(Color.rosePine("foam").opacity(0.18)).frame(width: 420).blur(radius: 120)
+            Circle().fill(Color.rosePine("foam").opacity(0.35)).frame(width: 460).blur(radius: 120)
                 .offset(x: -60, y: 320)
         }
         .ignoresSafeArea()
+    }
+}
+
+// A round icon button's face: the symbol centered in a circle of the given size, all of it clickable.
+struct GlassIcon: View {
+    let symbol: String
+    let size: CGFloat
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: size * 0.4, weight: .medium))
+            .frame(width: size, height: size)
+            .contentShape(Circle())
+    }
+}
+
+extension View {
+    // The same round glass for buttons and menus alike (menus ignore button styles otherwise).
+    @ViewBuilder func glassDisc() -> some View {
+        let plain = buttonStyle(.plain).menuStyle(.button).menuIndicator(.hidden).fixedSize()
+        if #available(macOS 26, *) {
+            plain.glassEffect(.regular.interactive(), in: .circle)
+        } else {
+            plain.background(.regularMaterial, in: Circle()).overlay(Circle().strokeBorder(.separator))
+        }
     }
 }
