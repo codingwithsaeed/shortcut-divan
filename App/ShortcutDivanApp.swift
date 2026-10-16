@@ -2,6 +2,7 @@
 // search and edit them. A click on the widget opens the window on that widget's section.
 // `open -g -a "Shortcut Divan" --args --reload` only refreshes the widgets and quits.
 import SwiftUI
+import UniformTypeIdentifiers
 import WidgetKit
 
 @main
@@ -84,11 +85,17 @@ struct DivanWindow: View {
                 SidebarCard(
                     sections: store.sections, total: total, selected: $selected,
                     add: { editing = .section(nil) }, menu: { sectionMenu($0) }
-                )
+                ) { from, to in
+                    withAnimation(.snappy) {
+                        store.sections.move(fromOffsets: [from], toOffset: to > from ? to + 1 : to)
+                    }
+                    store.commit()
+                }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
             }
             .scrollIndicators(.never)
+            .noTopEdgeEffect()
             .environment(\.layoutDirection, .app)
             .navigationSplitViewColumnWidth(min: 230, ideal: 250)
         } detail: {
@@ -123,6 +130,7 @@ struct DivanWindow: View {
                     .padding(.top, 6)
                     .environment(\.layoutDirection, .app)
                 }
+                .noTopEdgeEffect()
                 .onChange(of: selected) { _, _ in
                     if let first = shown.first { proxy.scrollTo(store.sections[first.index].title, anchor: .top) }
                 }
@@ -131,6 +139,7 @@ struct DivanWindow: View {
         }
         .navigationTitle("Shortcut Divan")
         .hidingTitle()
+        .clearToolbar()
         .background {
             Button("") { searching = true }.keyboardShortcut("f").hidden()
         }
@@ -464,14 +473,17 @@ enum Theme: String, CaseIterable {
 }
 
 // The sidebar as one glass card, like the section cards: a header with the section count,
-// add and more buttons, then All Shortcuts and a row per section.
+// add and more buttons, then All Shortcuts and a row per section. Drag a section to reorder.
 struct SidebarCard<Menu: View>: View {
     let sections: [Section]
     let total: Int
     @Binding var selected: String?
     let add: () -> Void
     @ViewBuilder let menu: (Int) -> Menu
+    let move: (_ from: Int, _ to: Int) -> Void
     @Bindable private var store = Store.shared
+    @State private var dragging: Int?
+    @State private var target: Int?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -523,6 +535,17 @@ struct SidebarCard<Menu: View>: View {
                         accent: section.accent, count: section.rows.filter { $0.only == nil }.count,
                         picked: selected == section.title
                     ) { selected = section.title }
+                    .overlay(alignment: (dragging ?? index) > index ? .top : .bottom) {
+                        // Where the dragged section will land: above this row going up, below it going down.
+                        if target == index, let dragging, dragging != index {
+                            Capsule().fill(Color.accentColor).frame(height: 2).offset(y: dragging > index ? -1 : 1)
+                        }
+                    }
+                    .onDrag {
+                        dragging = index
+                        return NSItemProvider(object: section.title as NSString)
+                    }
+                    .onDrop(of: [.text], delegate: SectionDrop(index: index, dragging: $dragging, target: $target, move: move))
                     .contextMenu { menu(index) }
                 }
             }
@@ -530,6 +553,26 @@ struct SidebarCard<Menu: View>: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .glassCard(cornerRadius: 16)
+    }
+}
+
+// A section dropped on another row takes that row's place.
+struct SectionDrop: DropDelegate {
+    let index: Int
+    @Binding var dragging: Int?
+    @Binding var target: Int?
+    let move: (Int, Int) -> Void
+
+    func validateDrop(info: DropInfo) -> Bool { dragging != nil }
+    func dropEntered(info: DropInfo) { target = index }
+    func dropExited(info: DropInfo) { if target == index { target = nil } }
+    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+
+    func performDrop(info: DropInfo) -> Bool {
+        defer { dragging = nil; target = nil }
+        guard let from = dragging, from != index else { return false }
+        move(from, index)
+        return true
     }
 }
 
@@ -547,36 +590,35 @@ struct SidebarRow: View {
 
     var body: some View {
         let color = Color.rosePine(accent)
-        Button(action: pick) {
-            HStack(spacing: 10) {
-                Group {
-                    if let symbol {
-                        Image(systemName: symbol).foregroundStyle(.secondary)
-                    } else {
-                        Circle().fill(color).frame(width: 9, height: 9)
-                    }
+        HStack(spacing: 10) {
+            Group {
+                if let symbol {
+                    Image(systemName: symbol).foregroundStyle(.secondary)
+                } else {
+                    Circle().fill(color).frame(width: 9, height: 9)
                 }
-                .frame(width: 16)
-                Group {
-                    if let verbatim { Text(verbatim: verbatim) } else { Text(title) }
-                }
-                .font(.system(size: 13.5, weight: picked ? .semibold : .regular))
-                .lineLimit(1)
-                Spacer(minLength: 4)
-                Text(verbatim: count.formatted())
-                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(color.opacity(picked ? 0.20 : hovering ? 0.10 : 0))
-            )
-            .contentShape(Rectangle())
+            .frame(width: 16)
+            Group {
+                if let verbatim { Text(verbatim: verbatim) } else { Text(title) }
+            }
+            .font(.system(size: 13.5, weight: picked ? .semibold : .regular))
+            .lineLimit(1)
+            Spacer(minLength: 4)
+            Text(verbatim: count.formatted())
+                .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                .foregroundStyle(.secondary)
         }
-        .buttonStyle(.plain)
-        .focusable(false)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(color.opacity(picked ? 0.20 : hovering ? 0.10 : 0))
+        )
+        .contentShape(Rectangle())
+        // A tap rather than a button, so a row can also be dragged.
+        .onTapGesture(perform: pick)
+        .accessibilityAddTraits(.isButton)
         .onHover { hovering = $0 }
     }
 }
@@ -750,6 +792,18 @@ extension View {
     // No title in the toolbar: the search field and the cards say where you are.
     @ViewBuilder func hidingTitle() -> some View {
         if #available(macOS 15, *) { toolbar(removing: .title) } else { self }
+    }
+}
+
+// The window's backdrop runs up under the title bar in one piece: no toolbar band
+// (macOS 15) and no blurred strip where content scrolls under it (macOS 26).
+extension View {
+    @ViewBuilder func clearToolbar() -> some View {
+        if #available(macOS 15, *) { toolbarBackgroundVisibility(.hidden, for: .windowToolbar) } else { self }
+    }
+
+    @ViewBuilder func noTopEdgeEffect() -> some View {
+        if #available(macOS 26, *) { scrollEdgeEffectHidden(true, for: .top) } else { self }
     }
 }
 
