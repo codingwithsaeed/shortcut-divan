@@ -82,7 +82,10 @@ struct DivanWindow: View {
 
     @FocusState private var searching: Bool
     @State private var sidebarShown = true
-    @AppStorage("sidebarWidth") private var sidebarWidth: Double = 250
+    @AppStorage("sidebarWidth") private var sidebarWidth: Double = 270
+    // The sidebar column, kept in range even if an older, narrower width was saved.
+    var sideWidth: CGFloat { min(max(sidebarWidth, SidebarResizer.range.lowerBound), SidebarResizer.range.upperBound) }
+    var panelWidth: CGFloat { sideWidth - SidebarPanel.inset }
     @State private var columnWidth: CGFloat = 0
     @State private var contentWidth: CGFloat = 0
 
@@ -102,14 +105,15 @@ struct DivanWindow: View {
                             }
                             store.commit()
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.top, Self.cardsTop - SidebarPanel.inset) // level with the first section card
+                        .padding(.horizontal, SidebarPanel.padding)
+                        .padding(.top, SidebarPanel.padding) // level with the first section card
                         .padding(.bottom, 12)
                     }
                     .scrollIndicators(.never)
-                    .frame(width: sidebarWidth - SidebarPanel.inset)
+                    .frame(width: panelWidth)
                     .clipShape(SidebarPanel.shape)
-                    .padding([.leading, .vertical], SidebarPanel.inset)
+                    .padding(.top, SidebarPanel.top)
+                    .padding([.leading, .bottom], SidebarPanel.inset)
                     .transition(.move(edge: .leading).combined(with: .opacity))
                     Color.clear.frame(width: 1)
                 }
@@ -157,19 +161,21 @@ struct DivanWindow: View {
                 .allowsHitTesting(false)
             if sidebarShown {
                 SidebarPanel()
-                    .frame(width: sidebarWidth - SidebarPanel.inset)
-                    .padding([.leading, .vertical], SidebarPanel.inset)
+                    .frame(width: panelWidth)
+                    .padding(.top, SidebarPanel.top)
+                    .padding([.leading, .bottom], SidebarPanel.inset)
                     .allowsHitTesting(false)
                     .transition(.move(edge: .leading).combined(with: .opacity))
                 SidebarResizer(width: $sidebarWidth)
-                    .padding(.leading, sidebarWidth - 4)
+                    .padding(.top, SidebarPanel.top)
+                    .padding(.leading, sideWidth - 4)
             }
             if sidebarShown {
                 // The strip above the sidebar card moves the window too.
-                Color.clear.frame(width: sidebarWidth, height: Self.barHeight).movesWindow()
+                Color.clear.frame(width: sideWidth, height: Self.barHeight).movesWindow()
             }
             topBar
-                .padding(.leading, sidebarShown ? sidebarWidth + 1 : 0)
+                .padding(.leading, sidebarShown ? sideWidth + 1 : 0)
         }
         .environment(\.layoutDirection, .app)
         .ignoresSafeArea(.container, edges: .top)
@@ -557,6 +563,8 @@ struct SidebarCard<Menu: View>: View {
             HStack(spacing: 8) {
                 Text("Sections")
                     .font(.system(size: 15, weight: .bold))
+                    .lineLimit(1)
+                    .fixedSize()
                 Text(verbatim: sections.count.formatted())
                     .font(.system(size: 11, weight: .semibold).monospacedDigit())
                     .padding(.horizontal, 7)
@@ -643,11 +651,15 @@ struct SectionDrop: DropDelegate {
     }
 }
 
-// The sidebar's outline: a panel inset from the window, with the cards' rounded corners, a
-// clear edge, and a shadow cast outside it only, as if it sat a step above the backdrop.
-// It has no fill: the window's one backdrop shows through, the same as beside it.
+// The sidebar's outline: a panel with the cards' rounded corners, a clear edge, and a shadow
+// cast outside it only, as if it sat a step above the backdrop. It has no fill: the window's
+// one backdrop shows through, the same as beside it. It starts below the window buttons, its
+// card held the same distance from its top as from its sides, so the card's top is level
+// with the first section card.
 struct SidebarPanel: View {
-    static let inset: CGFloat = 8
+    static let inset: CGFloat = 8 // from the window's side and bottom
+    static let padding: CGFloat = 12 // around the card inside
+    static let top = DivanWindow.cardsTop - padding
     static let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
     static let spill: CGFloat = 30 // room for the shadow outside the panel
 
@@ -677,7 +689,7 @@ struct SidebarResizer: View {
     @Binding var width: Double
     @State private var start: Double?
 
-    static let range = 220.0...380.0
+    static let range = 260.0...400.0
 
     var body: some View {
         Color.clear
@@ -691,7 +703,7 @@ struct SidebarResizer: View {
                 // the sidebar is on the right and grows to the left.
                 DragGesture(minimumDistance: 1, coordinateSpace: .global)
                     .onChanged { drag in
-                        let from = start ?? width
+                        let from = start ?? min(max(width, Self.range.lowerBound), Self.range.upperBound)
                         start = from
                         let delta = LayoutDirection.app == .rightToLeft ? -drag.translation.width : drag.translation.width
                         width = min(max(from + delta, Self.range.lowerBound), Self.range.upperBound)
