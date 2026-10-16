@@ -103,11 +103,13 @@ struct DivanWindow: View {
                             store.commit()
                         }
                         .padding(.horizontal, 12)
-                        .padding(.top, Self.cardsTop) // level with the first section card
+                        .padding(.top, Self.cardsTop - SidebarPanel.inset) // level with the first section card
                         .padding(.bottom, 12)
                     }
                     .scrollIndicators(.never)
-                    .frame(width: sidebarWidth)
+                    .frame(width: sidebarWidth - SidebarPanel.inset)
+                    .clipShape(SidebarPanel.shape)
+                    .padding([.leading, .vertical], SidebarPanel.inset)
                     .transition(.move(edge: .leading).combined(with: .opacity))
                     Color.clear.frame(width: 1)
                 }
@@ -154,15 +156,11 @@ struct DivanWindow: View {
                 }
                 .allowsHitTesting(false)
             if sidebarShown {
-                // The sidebar's edge: a clear line, and a shadow cast onto the cards' side as if
-                // the sidebar sat a step higher. Drag it to resize the sidebar.
-                HStack(spacing: 0) {
-                    Rectangle().fill(Color.primary.opacity(0.16)).frame(width: 1)
-                    LinearGradient(colors: [.black.opacity(0.16), .clear], startPoint: .leading, endPoint: .trailing)
-                        .frame(width: 14)
-                        .allowsHitTesting(false)
-                }
-                .padding(.leading, sidebarWidth)
+                SidebarPanel()
+                    .frame(width: sidebarWidth - SidebarPanel.inset)
+                    .padding([.leading, .vertical], SidebarPanel.inset)
+                    .allowsHitTesting(false)
+                    .transition(.move(edge: .leading).combined(with: .opacity))
                 SidebarResizer(width: $sidebarWidth)
                     .padding(.leading, sidebarWidth - 4)
             }
@@ -642,6 +640,34 @@ struct SectionDrop: DropDelegate {
         guard let from = dragging, from != index else { return false }
         move(from, index)
         return true
+    }
+}
+
+// The sidebar's outline: a panel inset from the window, with the cards' rounded corners, a
+// clear edge, and a shadow cast outside it only, as if it sat a step above the backdrop.
+// It has no fill: the window's one backdrop shows through, the same as beside it.
+struct SidebarPanel: View {
+    static let inset: CGFloat = 8
+    static let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+    static let spill: CGFloat = 30 // room for the shadow outside the panel
+
+    var body: some View {
+        Color.clear
+            .overlay {
+                Self.shape
+                    .fill(.black.opacity(0.28))
+                    .blur(radius: 10)
+                    .offset(x: 3, y: 3)
+                    .padding(Self.spill)
+                    // Cut the panel itself out, so the shadow falls only outside it.
+                    .mask {
+                        Rectangle()
+                            .overlay { Self.shape.padding(Self.spill).blendMode(.destinationOut) }
+                            .compositingGroup()
+                    }
+                    .padding(-Self.spill)
+            }
+            .overlay { Self.shape.strokeBorder(Color.primary.opacity(0.16), lineWidth: 1) }
     }
 }
 
