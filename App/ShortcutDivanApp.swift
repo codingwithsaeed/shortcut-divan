@@ -2,6 +2,7 @@
 // search and edit them. A click on the widget opens the window on that widget's section.
 // `open -g -a "Shortcut Divan" --args --reload` only refreshes the widgets and quits.
 import SwiftUI
+import UniformTypeIdentifiers
 import WidgetKit
 
 @main
@@ -29,6 +30,9 @@ struct ShortcutDivanApp: App {
             DivanWindow()
         }
         .defaultSize(width: 860, height: 600)
+        // No title bar: the search bar sits where it would be, and stays there as the
+        // sections scroll under it.
+        .windowStyle(.hiddenTitleBar)
 
         Settings {
             SettingsView()
@@ -77,60 +81,51 @@ struct DivanWindow: View {
     @State private var deleting: Editing?
 
     @FocusState private var searching: Bool
+    @State private var sidebarShown = true
+    @AppStorage("sidebarWidth") private var sidebarWidth: Double = 310
+    // The sidebar column, kept in range even if an older, narrower width was saved.
+    var sideWidth: CGFloat { min(max(sidebarWidth, SidebarResizer.range.lowerBound), SidebarResizer.range.upperBound) }
+    @State private var columnWidth: CGFloat = 0
+    @State private var contentWidth: CGFloat = 0
+
+    // The layout. The sidebar is a card inset from the window, holding the window buttons at
+    // its top corner (moved down from the window's edge), the app's name, and a card per
+    // section. Beside it, one header row level with the window buttons; then the search
+    // field, pinned, and level with the sidebar's first row; then the cards, which scroll
+    // under both.
+    static let headerHeight: CGFloat = 60
+    static let inset: CGFloat = 8 // the sidebar card from the window's edges
+    static let sidebarRadius: CGFloat = 18
+    static let disc: CGFloat = 34 // the round buttons in the header row
+    static let smallDisc: CGFloat = 30 // in the sidebar card's top, where room is tight
+    static let barHeight = headerHeight + SearchField.height + 10 // the pinned part of the content
+    static let cardsTop = barHeight + 8
+    static let side: CGFloat = 28 // the content's side margin, shared by the header, search and cards
+    static let listInset: CGFloat = 10 // the sidebar rows' margin from the card's sides
 
     var body: some View {
-        NavigationSplitView {
-            ScrollView {
-                SidebarCard(
-                    sections: store.sections, total: total, selected: $selected,
-                    add: { editing = .section(nil) }, menu: { sectionMenu($0) }
-                )
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-            }
-            .scrollIndicators(.never)
-            .environment(\.layoutDirection, .app)
-            .navigationSplitViewColumnWidth(min: 230, ideal: 250)
-        } detail: {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 22) {
-                        HStack(spacing: 12) {
-                            SearchField(text: $query, focus: $searching)
-                            GlassGroup {
-                                ThemeButton(size: SearchField.height)
-                                LanguageMenu(size: SearchField.height)
-                                SettingsLink { GlassIcon(symbol: "gearshape", size: SearchField.height) }
-                                    .glassDisc()
-                                    .help("Settings")
-                            }
-                            .focusable(false)
-                        }
-                        ForEach(shown, id: \.index) { item in
-                            SectionTable(
-                                section: store.sections[item.index], index: item.index, rows: item.rows,
-                                edit: { editing = $0 }, delete: { deleting = $0 },
-                                menu: { sectionMenu(item.index) }
-                            )
-                            .id(store.sections[item.index].title)
-                        }
-                        if shown.isEmpty && !query.isEmpty {
-                            Text("Nothing matches “\(query)”.").foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.horizontal, 28)
-                    .padding(.bottom, 28)
-                    .padding(.top, 6)
-                    .environment(\.layoutDirection, .app)
+        // One backdrop under the whole window, so the sidebar and the cards sit on the same
+        // colors; a line with a soft shadow is all that parts them.
+        ZStack(alignment: .topLeading) {
+            HStack(spacing: 0) {
+                if sidebarShown {
+                    sidebarColumn
+                    Color.clear.frame(width: 1)
                 }
-                .onChange(of: selected) { _, _ in
-                    if let first = shown.first { proxy.scrollTo(store.sections[first.index].title, anchor: .top) }
-                }
+                contentColumn
             }
-            .background(Backdrop())
+            fadeLayer
+            if sidebarShown { sidebarEdge }
+            pinnedRows
         }
+        .background(TrafficLights(centerY: Self.headerHeight / 2))
+        .environment(\.layoutDirection, .app)
+        .font(.app(13))
+        .ignoresSafeArea(.container, edges: .top)
+        .background(Backdrop())
         .navigationTitle("Shortcut Divan")
         .hidingTitle()
+        .clearToolbar()
         .background {
             Button("") { searching = true }.keyboardShortcut("f").hidden()
         }
@@ -185,6 +180,187 @@ struct DivanWindow: View {
         .frame(minWidth: 680, minHeight: 480)
     }
 
+    var sidebarColumn: some View {
+        VStack(spacing: 0) {
+            sidebarHeader
+            ScrollView {
+                SidebarList(
+                    sections: store.sections, total: total, selected: $selected,
+                    menu: { sectionMenu($0) }
+                ) { from, to in
+                    withAnimation(.snappy) {
+                        store.sections.move(fromOffsets: [from], toOffset: to > from ? to + 1 : to)
+                    }
+                    store.commit()
+                }
+                .padding(.horizontal, Self.listInset)
+                .padding(.bottom, Self.listInset)
+            }
+            .scrollIndicators(.never)
+        }
+        .frame(width: sideWidth - Self.inset)
+        .clipShape(RoundedRectangle(cornerRadius: Self.sidebarRadius, style: .continuous))
+        .glassCard(cornerRadius: Self.sidebarRadius)
+        .padding([.leading, .vertical], Self.inset)
+        .transition(.move(edge: .leading).combined(with: .opacity))
+    }
+
+    var contentColumn: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 22) {
+                    ForEach(shown, id: \.index) { item in
+                        SectionTable(
+                            section: store.sections[item.index], index: item.index, rows: item.rows,
+                            edit: { editing = $0 }, delete: { deleting = $0 },
+                            menu: { sectionMenu(item.index) }
+                        )
+                        .id(store.sections[item.index].title)
+                    }
+                    if shown.isEmpty && !query.isEmpty {
+                        Text("Nothing matches “\(query)”.").foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.horizontal, Self.side)
+                .padding(.bottom, Self.side)
+                .padding(.top, Self.cardsTop - Self.barHeight)
+                .frame(maxWidth: .infinity)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { contentWidth = $0 }
+                .environment(\.layoutDirection, .app)
+            }
+            .safeAreaPadding(.top, Self.barHeight)
+            .noTopEdgeEffect()
+            .onChange(of: selected) { _, _ in
+                if let first = shown.first { proxy.scrollTo(store.sections[first.index].title, anchor: .top) }
+            }
+        }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { columnWidth = $0 }
+    }
+
+    var fadeLayer: some View {
+        // What scrolls fades out under the pinned rows into a second copy of the backdrop,
+        // so nothing shows through their glass and no band marks where they start: under
+        // the header and the search field.
+        Backdrop()
+            .mask(alignment: .topLeading) {
+                HStack(alignment: .top, spacing: 0) {
+                    if sidebarShown { Color.clear.frame(width: sideWidth + 1) } // the sidebar card clips its own
+                    Self.fade(Self.barHeight - 6, 22)
+                }
+            }
+            .allowsHitTesting(false)
+    }
+
+    // Drag the sidebar card's edge to resize it.
+    var sidebarEdge: some View {
+        SidebarResizer(width: $sidebarWidth)
+            .padding(.vertical, Self.inset + Self.sidebarRadius)
+            .padding(.leading, sideWidth - 4)
+    }
+
+    var pinnedRows: some View {
+        VStack(spacing: 0) {
+            contentHeader
+            SearchField(text: $query, focus: $searching)
+                .padding(.leading, Self.side)
+                .padding(.trailing, trailingSide)
+        }
+        .padding(.leading, sidebarShown ? sideWidth + 1 : 0)
+    }
+
+    // A visible scroll bar narrows the cards; the header and the search field narrow with
+    // them, so their ends line up with the cards' (left ones, in Persian).
+    var trailingSide: CGFloat { Self.side + max(0, columnWidth - contentWidth) }
+
+    static func fade(_ solid: CGFloat, _ soft: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            Color.black.frame(height: solid)
+            LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: soft)
+        }
+    }
+
+    // The top of the sidebar card: the window buttons, the app's name, then new section and
+    // more. Its middle is level with the header row beside it.
+    var sidebarHeader: some View {
+        HStack(spacing: 8) {
+            Text("Shortcut Divan")
+                .font(.app(15, .bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Spacer(minLength: 0)
+            GlassGroup {
+                Button { editing = .section(nil) } label: { GlassIcon(symbol: "plus", size: Self.smallDisc) }
+                    .glassDisc()
+                    .focusable(false)
+                    .help("New Section")
+                SwiftUI.Menu {
+                    Button("New Section") { editing = .section(nil) }
+                    Divider()
+                    Button("Import…") { store.importFile() }
+                    Button("Export…") { store.exportFile() }
+                    Divider()
+                    Button("Follow a Shortcuts File…") { store.link() }
+                    if store.linkedFile != nil { Button("Stop Following File") { store.unlink() } }
+                } label: {
+                    GlassIcon(symbol: "ellipsis", size: Self.smallDisc)
+                }
+                .glassDisc()
+                .focusable(false)
+                .help("More")
+            }
+        }
+        .padding(.leading, TrafficLights.width - Self.inset)
+        .padding(.trailing, Self.listInset)
+        // Centered on the window buttons, the same as the header row beside it; the first
+        // row below starts level with the search field.
+        .frame(height: Self.headerHeight - 2 * Self.inset)
+        .padding(.bottom, Self.inset)
+        .movesWindow()
+    }
+
+    // The content's part of the header row: sidebar toggle, what is shown, and the theme,
+    // language and settings buttons. With the sidebar hidden it starts after the window buttons.
+    var contentHeader: some View {
+        HStack(spacing: 8) {
+            Button {
+                withAnimation(.snappy) { sidebarShown.toggle() }
+            } label: {
+                GlassIcon(symbol: "sidebar.leading", size: Self.disc)
+            }
+            .glassDisc()
+            .focusable(false)
+            .help("Toggle Sidebar")
+            Spacer(minLength: 8)
+            heading
+            Spacer(minLength: 8)
+            GlassGroup {
+                ThemeButton(size: Self.disc)
+                LanguageMenu(size: Self.disc)
+                SettingsLink { GlassIcon(symbol: "gearshape", size: Self.disc) }
+                    .glassDisc()
+                    .help("Settings")
+            }
+            .focusable(false)
+        }
+        .padding(.leading, sidebarShown ? Self.side : TrafficLights.width)
+        .padding(.trailing, trailingSide)
+        .frame(height: Self.headerHeight)
+        .movesWindow()
+    }
+
+    // The title in the middle of the header: the picked section, or all of them.
+    @ViewBuilder var heading: some View {
+        if let index = store.sections.firstIndex(where: { $0.title == selected }) {
+            let section = store.sections[index]
+            HStack(spacing: 8) {
+                Circle().fill(Color.rosePine(section.accent)).frame(width: 9, height: 9)
+                Text(verbatim: section.title).font(.app(15, .semibold)).lineLimit(1)
+            }
+        } else {
+            Text("All Shortcuts").font(.app(15, .semibold)).lineLimit(1)
+        }
+    }
+
     @ViewBuilder func sectionMenu(_ index: Int) -> some View {
         Button("Add Shortcut…") { editing = .row(section: index, row: nil) }
         Button("Edit Section…") { editing = .section(index) }
@@ -234,20 +410,20 @@ struct SectionTable<Menu: View>: View {
             HStack(spacing: 8) {
                 Circle().fill(accent).frame(width: 9, height: 9)
                 Text(verbatim: section.title)
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.app(15, .bold))
                 Text(verbatim: rows.count.formatted())
-                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    .font(.app(11, .semibold).monospacedDigit())
                     .padding(.horizontal, 7)
                     .padding(.vertical, 2)
                     .background(accent.opacity(0.15), in: Capsule())
                     .foregroundStyle(accent)
                 Spacer(minLength: 0)
                 GlassGroup {
-                    Button { edit(.row(section: index, row: nil)) } label: { GlassIcon(symbol: "plus", size: 32) }
+                    Button { edit(.row(section: index, row: nil)) } label: { GlassIcon(symbol: "plus", size: 34) }
                         .glassDisc()
                         .focusable(false)
                         .help("Add a shortcut to this section")
-                    SwiftUI.Menu { menu() } label: { GlassIcon(symbol: "ellipsis", size: 32) }
+                    SwiftUI.Menu { menu() } label: { GlassIcon(symbol: "ellipsis", size: 34) }
                         .glassDisc()
                         .focusable(false)
                         .help("More")
@@ -268,7 +444,7 @@ struct SectionTable<Menu: View>: View {
                     Spacer(minLength: 0)
                     Text("Keys")
                 }
-                .font(.system(size: 11, weight: .semibold))
+                .font(.app(11, .semibold))
                 .textCase(.uppercase)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 16)
@@ -303,7 +479,7 @@ struct RowLine: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(verbatim: shortcut.desc)
-                .font(.system(size: 13.5))
+                .font(.app(13.5))
                 .lineLimit(1)
             Spacer(minLength: 12)
             RowActions(edit: edit, delete: delete)
@@ -348,7 +524,7 @@ struct RowActions: View {
 
     func tile(_ symbol: String, tint: Color) -> some View {
         Image(systemName: symbol)
-            .font(.system(size: 11, weight: .semibold))
+            .font(.system(size: 13, weight: .semibold))
             .foregroundStyle(tint)
             .frame(width: 26, height: 22)
             .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
@@ -362,7 +538,6 @@ struct RowEditor: View {
     @State var section: Int
     @State var row: Shortcut
     let save: (Shortcut, Int) -> Void
-    @Environment(\.dismiss) private var dismiss
 
     init(sections: [String], section: Int, row: Shortcut, save: @escaping (Shortcut, Int) -> Void) {
         self.sections = sections
@@ -380,7 +555,7 @@ struct RowEditor: View {
             HStack(spacing: 4) {
                 ForEach(Self.symbols, id: \.self) { symbol in
                     Button { row.keys += symbol } label: { Text(verbatim: symbol) }
-                        .font(.system(size: 14))
+                        .buttonStyle(KeycapButtonStyle())
                 }
             }
             .environment(\.layoutDirection, .leftToRight)
@@ -390,24 +565,21 @@ struct RowEditor: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 520)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    save(Shortcut(keys: row.keys.trimmed, desc: row.desc.trimmed, only: row.only), section)
-                    dismiss()
-                }
-                .disabled(row.keys.trimmed.isEmpty || row.desc.trimmed.isEmpty)
+        .scrollDisabled(true)
+        .safeAreaInset(edge: .bottom) {
+            SheetButtons(disabled: row.keys.trimmed.isEmpty || row.desc.trimmed.isEmpty) {
+                save(Shortcut(keys: row.keys.trimmed, desc: row.desc.trimmed, only: row.only), section)
             }
         }
+        .appLook()
+        .frame(width: 520)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
 struct SectionEditor: View {
     @State var section: Section
     let save: (Section) -> Void
-    @Environment(\.dismiss) private var dismiss
 
     static let colorNames: [String: LocalizedStringKey] = [
         "love": "Pink", "gold": "Gold", "rose": "Rose", "pine": "Blue", "foam": "Teal", "iris": "Purple",
@@ -428,18 +600,16 @@ struct SectionEditor: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 400)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    section.title = section.title.trimmed
-                    save(section)
-                    dismiss()
-                }
-                .disabled(section.title.trimmed.isEmpty)
+        .scrollDisabled(true)
+        .safeAreaInset(edge: .bottom) {
+            SheetButtons(disabled: section.title.trimmed.isEmpty) {
+                section.title = section.title.trimmed
+                save(section)
             }
         }
+        .appLook()
+        .frame(width: 400)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -463,78 +633,199 @@ enum Theme: String, CaseIterable {
     }
 }
 
-// The sidebar as one glass card, like the section cards: a header with the section count,
-// add and more buttons, then All Shortcuts and a row per section.
-struct SidebarCard<Menu: View>: View {
+// The sidebar's rows, each a small card: All Shortcuts, then one per section. Drag a section
+// to reorder.
+struct SidebarList<Menu: View>: View {
     let sections: [Section]
     let total: Int
     @Binding var selected: String?
-    let add: () -> Void
     @ViewBuilder let menu: (Int) -> Menu
-    @Bindable private var store = Store.shared
+    let move: (_ from: Int, _ to: Int) -> Void
+    @State private var dragging: Int?
+    @State private var target: Int?
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Text("Sections")
-                    .font(.system(size: 15, weight: .bold))
-                Text(verbatim: sections.count.formatted())
-                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 2)
-                    .background(.fill.tertiary, in: Capsule())
-                    .foregroundStyle(.secondary)
-                Spacer(minLength: 0)
-                GlassGroup {
-                    Button(action: add) { GlassIcon(symbol: "plus", size: 32) }
-                        .glassDisc()
-                        .focusable(false)
-                        .help("New Section")
-                    SwiftUI.Menu {
-                        Button("New Section", action: add)
-                        Divider()
-                        Button("Import…") { store.importFile() }
-                        Button("Export…") { store.exportFile() }
-                        Divider()
-                        Button("Follow a Shortcuts File…") { store.link() }
-                        if store.linkedFile != nil { Button("Stop Following File") { store.unlink() } }
-                        Divider()
-                        SettingsLink { Text("Settings") }
-                    } label: {
-                        GlassIcon(symbol: "ellipsis", size: 32)
+        VStack(spacing: 6) {
+            SidebarRow(title: "All Shortcuts", symbol: "square.stack", count: total,
+                       picked: selected == nil || selected == DivanWindow.all) { selected = DivanWindow.all }
+                .padding(.bottom, 6) // a little apart from the sections
+            ForEach(Array(sections.enumerated()), id: \.offset) { index, section in
+                SidebarRow(
+                    title: LocalizedStringKey(section.title), verbatim: section.title,
+                    accent: section.accent, count: section.rows.filter { $0.only == nil }.count,
+                    picked: selected == section.title
+                ) { selected = section.title }
+                .overlay(alignment: (dragging ?? index) > index ? .top : .bottom) {
+                    // Where the dragged section will land: above this row going up, below it going down.
+                    if target == index, let dragging, dragging != index {
+                        Capsule().fill(Color.accentColor).frame(height: 2).offset(y: dragging > index ? -1 : 1)
                     }
-                    .glassDisc()
-                    .focusable(false)
-                    .help("More")
                 }
-            }
-            .padding(.leading, 16)
-            .padding(.trailing, 12)
-            .padding(.vertical, 12)
-            .background(Color.rosePine("iris").opacity(0.12))
-
-            VStack(spacing: 2) {
-                SidebarRow(title: "All Shortcuts", symbol: "square.stack", count: total,
-                           picked: selected == nil || selected == DivanWindow.all) { selected = DivanWindow.all }
-                Divider().opacity(0.5).padding(.horizontal, 8).padding(.vertical, 4)
-                ForEach(Array(sections.enumerated()), id: \.offset) { index, section in
-                    SidebarRow(
-                        title: LocalizedStringKey(section.title), verbatim: section.title,
-                        accent: section.accent, count: section.rows.filter { $0.only == nil }.count,
-                        picked: selected == section.title
-                    ) { selected = section.title }
-                    .contextMenu { menu(index) }
+                .onDrag {
+                    dragging = index
+                    return NSItemProvider(object: section.title as NSString)
                 }
+                .onDrop(of: [.text], delegate: SectionDrop(index: index, dragging: $dragging, target: $target, move: move))
+                .contextMenu { menu(index) }
             }
-            .padding(8)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .glassCard(cornerRadius: 16)
     }
 }
 
-// A sidebar row: a section's color dot (or a symbol), the name, and a count. The picked one
-// gets a band in its color, like a hovered shortcut row.
+// Moves the window's close, minimize and zoom buttons down to the middle of the header row,
+// as far from the window's side as from its top (as in Telegram), and keeps them there as
+// the window resizes. Without a title bar macOS puts them near the top edge, out of line
+// with everything else.
+struct TrafficLights: NSViewRepresentable {
+    let centerY: CGFloat
+    // Room the three buttons take from the window's edge, with a gap after them, for what
+    // comes next in the header.
+    static let width: CGFloat = 92
+
+    func makeNSView(context: Context) -> Placer {
+        let view = Placer()
+        view.centerY = centerY
+        return view
+    }
+
+    func updateNSView(_ view: Placer, context: Context) {
+        view.centerY = centerY
+        view.place()
+    }
+
+    final class Placer: NSView {
+        var centerY: CGFloat = 28
+        private var observers: [NSObjectProtocol] = []
+        private var watched: Set<ObjectIdentifier> = []
+        private var themeWatch: NSKeyValueObservation?
+        private var placing = false
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            observers.forEach(NotificationCenter.default.removeObserver)
+            observers = []
+            watched = []
+            themeWatch = nil
+            guard let window else { return }
+            let names: [Notification.Name] = [
+                NSWindow.didResizeNotification, NSWindow.didEndLiveResizeNotification,
+                NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification,
+                NSWindow.didExitFullScreenNotification, NSWindow.didChangeScreenNotification,
+            ]
+            for name in names {
+                observe(name, of: window)
+            }
+            // Switching light and dark lays the title bar out again, back at its own height.
+            themeWatch = NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
+                DispatchQueue.main.async { self?.place() }
+            }
+            DispatchQueue.main.async { self.place() }
+        }
+
+        private func observe(_ name: Notification.Name, of object: AnyObject) {
+            observers.append(NotificationCenter.default.addObserver(forName: name, object: object, queue: .main) { [weak self] _ in
+                self?.place()
+            })
+        }
+
+        // AppKit lays the title bar out again on its own (on theme changes, focus, hover over
+        // the buttons); any frame change of the bar or a button puts them back.
+        private func watch(_ view: NSView) {
+            guard watched.insert(ObjectIdentifier(view)).inserted else { return }
+            view.postsFrameChangedNotifications = true
+            observe(NSView.frameDidChangeNotification, of: view)
+        }
+
+        override func layout() {
+            super.layout()
+            place()
+        }
+
+        func place() {
+            guard !placing, let window, !window.styleMask.contains(.fullScreen),
+                  let close = window.standardWindowButton(.closeButton),
+                  let minimize = window.standardWindowButton(.miniaturizeButton),
+                  let zoom = window.standardWindowButton(.zoomButton),
+                  let bar = close.superview, let container = bar.superview else { return }
+            placing = true
+            defer { placing = false }
+            for view in [container, bar, close, minimize, zoom] { watch(view) }
+            // The title bar's container grows to the header's height, so the buttons can sit
+            // in its middle; it is transparent, and clicks beside the buttons still reach
+            // the header below it.
+            let height = centerY * 2
+            let frame = NSRect(x: container.frame.minX, y: window.frame.height - height,
+                               width: container.frame.width, height: height)
+            if container.frame != frame { container.frame = frame }
+            if bar.frame != container.bounds { bar.frame = container.bounds }
+            let size = close.frame.size
+            let step = size.width + 6 // the system's spacing between the three
+            let rightToLeft = window.windowTitlebarLayoutDirection == .rightToLeft
+            let first = centerY - size.width / 2 // same distance from the side as from the top
+            for (index, button) in [close, minimize, zoom].enumerated() {
+                let offset = first + CGFloat(index) * step
+                let x = rightToLeft ? bar.bounds.width - offset - size.width : offset
+                let origin = NSPoint(x: x, y: (height - size.height) / 2)
+                if button.frame.origin != origin { button.setFrameOrigin(origin) }
+            }
+        }
+
+        deinit { observers.forEach(NotificationCenter.default.removeObserver) }
+    }
+}
+
+// A section dropped on another row takes that row's place.
+struct SectionDrop: DropDelegate {
+    let index: Int
+    @Binding var dragging: Int?
+    @Binding var target: Int?
+    let move: (Int, Int) -> Void
+
+    func validateDrop(info: DropInfo) -> Bool { dragging != nil }
+    func dropEntered(info: DropInfo) { target = index }
+    func dropExited(info: DropInfo) { if target == index { target = nil } }
+    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+
+    func performDrop(info: DropInfo) -> Bool {
+        defer { dragging = nil; target = nil }
+        guard let from = dragging, from != index else { return false }
+        move(from, index)
+        return true
+    }
+}
+
+// A thin handle over the sidebar's edge: drag to resize the sidebar, kept between a width that
+// still fits the header buttons and one that leaves the cards room.
+struct SidebarResizer: View {
+    @Binding var width: Double
+    @State private var start: Double?
+
+    static let range = 300.0...440.0
+
+    var body: some View {
+        Color.clear
+            .frame(width: 9)
+            .contentShape(Rectangle())
+            .onHover { inside in
+                if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
+            }
+            .gesture(
+                // Screen coordinates, so the direction is the same in both layouts; in Persian
+                // the sidebar is on the right and grows to the left.
+                DragGesture(minimumDistance: 1, coordinateSpace: .global)
+                    .onChanged { drag in
+                        let from = start ?? min(max(width, Self.range.lowerBound), Self.range.upperBound)
+                        start = from
+                        let delta = LayoutDirection.app == .rightToLeft ? -drag.translation.width : drag.translation.width
+                        width = min(max(from + delta, Self.range.lowerBound), Self.range.upperBound)
+                    }
+                    .onEnded { _ in start = nil }
+            )
+    }
+}
+
+// A sidebar row as a small card: a section's color dot (or a symbol), the name, and a count.
+// The picked one is tinted and outlined in its color.
 struct SidebarRow: View {
     var title: LocalizedStringKey
     var verbatim: String?
@@ -547,43 +838,43 @@ struct SidebarRow: View {
 
     var body: some View {
         let color = Color.rosePine(accent)
-        Button(action: pick) {
-            HStack(spacing: 10) {
-                Group {
-                    if let symbol {
-                        Image(systemName: symbol).foregroundStyle(.secondary)
-                    } else {
-                        Circle().fill(color).frame(width: 9, height: 9)
-                    }
+        HStack(spacing: 10) {
+            Group {
+                if let symbol {
+                    Image(systemName: symbol).font(.system(size: 15)).foregroundStyle(.secondary)
+                } else {
+                    Circle().fill(color).frame(width: 9, height: 9)
                 }
-                .frame(width: 16)
-                Group {
-                    if let verbatim { Text(verbatim: verbatim) } else { Text(title) }
-                }
-                .font(.system(size: 13.5, weight: picked ? .semibold : .regular))
-                .lineLimit(1)
-                Spacer(minLength: 4)
-                Text(verbatim: count.formatted())
-                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(color.opacity(picked ? 0.20 : hovering ? 0.10 : 0))
-            )
-            .contentShape(Rectangle())
+            .frame(width: 16)
+            Group {
+                if let verbatim { Text(verbatim: verbatim) } else { Text(title) }
+            }
+            .font(.app(13.5, picked ? .semibold : .regular))
+            .lineLimit(1)
+            Spacer(minLength: 4)
+            Text(verbatim: count.formatted())
+                .font(.app(11, .semibold).monospacedDigit())
+                .foregroundStyle(.secondary)
         }
-        .buttonStyle(.plain)
-        .focusable(false)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background {
+            let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+            shape.fill(picked ? color.opacity(0.20) : Color.primary.opacity(hovering ? 0.08 : 0.045))
+                .overlay(shape.strokeBorder(picked ? color.opacity(0.45) : Color.primary.opacity(0.08), lineWidth: 0.75))
+        }
+        .contentShape(Rectangle())
+        // A tap rather than a button, so a row can also be dragged.
+        .onTapGesture(perform: pick)
+        .accessibilityAddTraits(.isButton)
         .onHover { hovering = $0 }
     }
 }
 
 // A wide search field at the top of the list, as in launcher apps. ⌘F focuses it, ⎋ clears it.
 struct SearchField: View {
-    static let height: CGFloat = 42
+    static let height: CGFloat = 38
 
     @Binding var text: String
     var focus: FocusState<Bool>.Binding
@@ -591,15 +882,15 @@ struct SearchField: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(.secondary)
             TextField("Search shortcuts", text: $text)
                 .textFieldStyle(.plain)
-                .font(.system(size: 16))
+                .font(.app(15))
                 .focused(focus)
             if text.isEmpty {
                 Text(verbatim: "⌘F")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.app(11, .medium))
                     .foregroundStyle(.tertiary)
                     .environment(\.layoutDirection, .leftToRight)
             } else {
@@ -682,24 +973,34 @@ struct SettingsView: View {
                         Text("Kept by the app")
                     }
                 }
-                HStack {
-                    Button("Follow a Shortcuts File…") { store.link() }
-                    if store.linkedFile != nil { Button("Stop Following File") { store.unlink() } }
+                HStack(spacing: 8) {
+                    Button("Follow a Shortcuts File…", systemImage: "link") { store.link() }
+                        .buttonStyle(TintButtonStyle(accent: "iris"))
+                    if store.linkedFile != nil {
+                        Button("Stop Following File", systemImage: "xmark") { store.unlink() }
+                            .buttonStyle(TintButtonStyle(accent: "gold"))
+                    }
                 }
             } footer: {
                 Text("A followed file is read, watched for changes, and saved back to when you edit here.")
                     .foregroundStyle(.secondary)
             }
             SwiftUI.Section {
-                HStack {
-                    Button("Import…") { store.importFile() }
-                    Button("Export…") { store.exportFile() }
+                HStack(spacing: 8) {
+                    Button("Import…", systemImage: "square.and.arrow.down") { store.importFile() }
+                        .buttonStyle(TintButtonStyle(accent: "foam"))
+                    Button("Export…", systemImage: "square.and.arrow.up") { store.exportFile() }
+                        .buttonStyle(TintButtonStyle(accent: "pine"))
                     Spacer()
-                    Button("Restore Default Shortcuts…", role: .destructive) { store.restoreDefaults() }
+                    Button("Restore Default Shortcuts…", systemImage: "arrow.counterclockwise", role: .destructive) {
+                        store.restoreDefaults()
+                    }
+                    .buttonStyle(TintButtonStyle(accent: "love"))
                 }
             }
         }
         .formStyle(.grouped)
+        .appLook()
         .frame(width: 520)
         .fixedSize(horizontal: false, vertical: true)
         .environment(\.layoutDirection, .app)
@@ -753,6 +1054,25 @@ extension View {
     }
 }
 
+// The window's backdrop runs up under the title bar in one piece: no toolbar band
+// (macOS 15) and no blurred strip where content scrolls under it (macOS 26).
+extension View {
+    @ViewBuilder func clearToolbar() -> some View {
+        if #available(macOS 15, *) { toolbarBackgroundVisibility(.hidden, for: .windowToolbar) } else { self }
+    }
+
+    @ViewBuilder func noTopEdgeEffect() -> some View {
+        if #available(macOS 26, *) { scrollEdgeEffectHidden(true, for: .top) } else { self }
+    }
+}
+
+extension View {
+    // Without a title bar, the window moves by dragging an empty spot of the top bar (macOS 15).
+    @ViewBuilder func movesWindow() -> some View {
+        if #available(macOS 15, *) { contentShape(Rectangle()).gesture(WindowDragGesture()) } else { self }
+    }
+}
+
 // Liquid Glass on macOS 26; a frosted material before that.
 extension View {
     @ViewBuilder func glassCard(cornerRadius: CGFloat) -> some View {
@@ -762,6 +1082,91 @@ extension View {
             background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
                 .overlay(RoundedRectangle(cornerRadius: cornerRadius).strokeBorder(.separator))
         }
+    }
+}
+
+// Text buttons tinted with a Rosé Pine color, in the keycaps' and row tiles' style: a soft
+// fill, a thin border in the same color, a stronger fill on hover and press. `prominent`
+// fills it for the main action of a sheet.
+struct TintButtonStyle: ButtonStyle {
+    var accent = "iris"
+    var prominent = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        Tinted(configuration: configuration, color: Color.rosePine(accent), prominent: prominent)
+    }
+
+    struct Tinted: View {
+        let configuration: Configuration
+        let color: Color
+        let prominent: Bool
+        @Environment(\.isEnabled) private var enabled
+        @State private var hovering = false
+
+        var body: some View {
+            let fill = prominent ? 0.85 : configuration.isPressed ? 0.32 : hovering ? 0.22 : 0.14
+            configuration.label
+                .font(.app(13, .medium))
+                .labelStyle(.titleAndIcon)
+                .foregroundStyle(prominent ? Color.white : color)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(color.opacity(configuration.isPressed && prominent ? 0.7 : fill),
+                            in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(color.opacity(prominent ? 0 : 0.35), lineWidth: 0.5))
+                .opacity(enabled ? 1 : 0.45)
+                .contentShape(Rectangle())
+                .onHover { hovering = $0 }
+                .animation(.easeOut(duration: 0.12), value: hovering)
+        }
+    }
+}
+
+// A key symbol to add in the shortcut editor, drawn as a keycap.
+struct KeycapButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.app(13, .semibold))
+            .frame(minWidth: 26, minHeight: 24)
+            .background(Color.primary.opacity(configuration.isPressed ? 0.22 : 0.10),
+                        in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.2), lineWidth: 0.5))
+            .contentShape(Rectangle())
+    }
+}
+
+extension View {
+    // Settings and the edit sheets in the main window's look: its colored backdrop behind
+    // the form's groups.
+    func appLook() -> some View {
+        scrollContentBackground(.hidden).background(Backdrop()).font(.app(13))
+    }
+}
+
+// Cancel and the main action at the bottom of an edit sheet, in the app's button style.
+struct SheetButtons: View {
+    let disabled: Bool
+    let save: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Spacer()
+            Button("Cancel") { dismiss() }
+                .buttonStyle(TintButtonStyle(accent: "text"))
+                .keyboardShortcut(.cancelAction)
+            Button("Save") {
+                save()
+                dismiss()
+            }
+            .buttonStyle(TintButtonStyle(accent: "iris", prominent: true))
+            .keyboardShortcut(.defaultAction)
+            .disabled(disabled)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 16)
     }
 }
 
@@ -788,7 +1193,7 @@ struct GlassIcon: View {
 
     var body: some View {
         Image(systemName: symbol)
-            .font(.system(size: size * 0.4, weight: .medium))
+            .font(.system(size: (size * 0.47).rounded(), weight: .medium))
             .frame(width: size, height: size)
             .contentShape(Circle())
     }

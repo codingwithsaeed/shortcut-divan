@@ -12,6 +12,11 @@ struct Keycaps: View {
 
     static let symbols: Set<Character> = ["⌃", "⌥", "⇧", "⌘", "⇥", "↩", "⎋", "⌫", "␣", "←", "→", "↑", "↓"]
 
+    // A typed command ("cd -", "tinker") rather than a key: shown in a monospaced font.
+    static func isCommand(_ text: String) -> Bool {
+        text.count > 1 && !text.contains(where: symbols.contains) && text != "Space"
+    }
+
     static func parts(_ keys: String) -> [Part] {
         var parts: [Part] = []
         for (n, option) in keys.components(separatedBy: " / ").enumerated() {
@@ -43,7 +48,7 @@ struct Keycaps: View {
                 switch part {
                 case let .cap(text):
                     Text(verbatim: text)
-                        .font(.system(size: size, weight: .semibold, design: text.count > 1 && !text.contains(where: Self.symbols.contains) && text != "Space" ? .monospaced : .default))
+                        .font(Self.isCommand(text) ? .system(size: size, weight: .semibold, design: .monospaced) : .app(size, .semibold))
                         .frame(minWidth: size + 1.5)
                         .padding(.horizontal, size * 0.48)
                         .padding(.vertical, size * 0.24)
@@ -55,7 +60,7 @@ struct Keycaps: View {
                 case .gap:
                     Color.clear.frame(width: 4, height: 1)
                 case let .text(text):
-                    Text(verbatim: text).font(.system(size: size)).foregroundStyle(.tertiary)
+                    Text(verbatim: text).font(.app(size)).foregroundStyle(.tertiary)
                 }
             }
         }
