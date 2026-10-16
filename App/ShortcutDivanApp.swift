@@ -322,7 +322,7 @@ struct RowLine: View {
                 .font(.system(size: 13.5))
                 .lineLimit(1)
             Spacer(minLength: 12)
-            RowActions(edit: edit, delete: delete)
+            RowActions(accent: accent, edit: edit, delete: delete)
                 .opacity(hovering ? 1 : 0)
             Keycaps(keys: shortcut.keys, accent: accent)
         }
@@ -343,29 +343,28 @@ struct RowLine: View {
     }
 }
 
-// Edit and delete, shown on hover: one small glass capsule, the delete half red.
+// Edit and delete, shown on hover: bare icons, the pencil in the section's color and the bin red.
 struct RowActions: View {
+    let accent: Color
     let edit: () -> Void
     let delete: () -> Void
 
     var body: some View {
-        HStack(spacing: 0) {
-            Button(action: edit) { face("pencil") }
+        HStack(spacing: 4) {
+            Button(action: edit) { face("pencil").foregroundStyle(accent) }
                 .help("Edit")
-            Divider().frame(height: 14)
             Button(action: delete) { face("trash").foregroundStyle(.red) }
                 .help("Delete")
         }
         .buttonStyle(.plain)
         .focusable(false)
         .fixedSize()
-        .glassCapsule()
     }
 
     func face(_ symbol: String) -> some View {
         Image(systemName: symbol)
-            .font(.system(size: 11.5, weight: .medium))
-            .frame(width: 30, height: 24)
+            .font(.system(size: 13, weight: .semibold))
+            .frame(width: 24, height: 24)
             .contentShape(Rectangle())
     }
 }
@@ -770,17 +769,6 @@ struct GlassIcon: View {
             .font(.system(size: size * 0.4, weight: .medium))
             .frame(width: size, height: size)
             .contentShape(Circle())
-    }
-}
-
-// A glass capsule behind a group of small buttons.
-extension View {
-    @ViewBuilder func glassCapsule() -> some View {
-        if #available(macOS 26, *) {
-            glassEffect(.regular.interactive(), in: .capsule)
-        } else {
-            background(.regularMaterial, in: Capsule()).overlay(Capsule().strokeBorder(.separator))
-        }
     }
 }
 
