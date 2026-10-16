@@ -82,6 +82,8 @@ struct DivanWindow: View {
 
     @FocusState private var searching: Bool
     @State private var columns = NavigationSplitViewVisibility.all
+    @State private var columnWidth: CGFloat = 0
+    @State private var contentWidth: CGFloat = 0
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columns) {
@@ -96,7 +98,7 @@ struct DivanWindow: View {
                     store.commit()
                 }
                 .padding(.horizontal, 12)
-                .padding(.top, 44) // below the window buttons
+                .padding(.top, Self.cardsTop) // level with the first section card
                 .padding(.bottom, 8)
             }
             .scrollIndicators(.never)
@@ -123,7 +125,9 @@ struct DivanWindow: View {
                     }
                     .padding(.horizontal, 28)
                     .padding(.bottom, 28)
-                    .padding(.top, 10)
+                    .padding(.top, Self.cardsTop - Self.barHeight)
+                    .frame(maxWidth: .infinity)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { contentWidth = $0 }
                     .environment(\.layoutDirection, .app)
                 }
                 .safeAreaPadding(.top, Self.barHeight)
@@ -147,6 +151,7 @@ struct DivanWindow: View {
                     .allowsHitTesting(false)
             }
             .overlay(alignment: .top) { topBar }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { columnWidth = $0 }
             .ignoresSafeArea(.container, edges: .top)
             .background(Backdrop())
         }
@@ -210,6 +215,7 @@ struct DivanWindow: View {
     // Sidebar toggle, search field, theme, language, settings. With the sidebar hidden, it
     // keeps clear of the window buttons.
     static let barHeight: CGFloat = 10 + SearchField.height + 8
+    static let cardsTop = barHeight + 10 // where the first card and the sidebar card start
 
     var topBar: some View {
         HStack(spacing: 12) {
@@ -232,7 +238,9 @@ struct DivanWindow: View {
             .focusable(false)
         }
         .padding(.leading, columns == .detailOnly ? 96 : 28)
-        .padding(.trailing, 28)
+        // A visible scroll bar narrows the cards; the bar narrows with them, so its last
+        // button lines up with the cards' right edge (left, in Persian).
+        .padding(.trailing, 28 + max(0, columnWidth - contentWidth))
         .frame(height: Self.barHeight - 10 - 8)
         .padding(.top, 10)
         .padding(.bottom, 8)
