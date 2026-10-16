@@ -431,6 +431,16 @@
         }
       }
     },
+    "Previous Section": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بخش قبلی"
+          }
+        }
+      }
+    },
     "Purple": {
       "localizations": {
         "fa": {
@@ -647,6 +657,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "عنوان"
+          }
+        }
+      }
+    },
+    "Toggle Sidebar": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نمایش یا پنهان کردن نوار کناری"
           }
         }
       }

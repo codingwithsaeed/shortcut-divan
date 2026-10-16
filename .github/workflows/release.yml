@@ -1,7 +1,8 @@
 # Builds Shortcut Divan and attaches it to the GitHub release.
 # Publish a release (e.g. `gh release create v1.0.0 --generate-notes`) and this
-# workflow adds Shortcut-Divan-<version>.dmg to it. Run it by hand
-# (Actions › Release › Run workflow) to get the build as a workflow artifact instead.
+# workflow adds Shortcut-Divan-<version>.dmg to it, then updates the Homebrew cask in
+# codingwithsaeed/homebrew-tap. Run it by hand (Actions › Release › Run workflow) to get
+# the build as a workflow artifact instead.
 name: Release
 
 on:
@@ -56,6 +57,29 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+
+      # Needs the HOMEBREW_TAP_TOKEN secret: a fine-grained token with read and write
+      # access to the contents of codingwithsaeed/homebrew-tap only.
+      - name: Update the Homebrew cask
+        if: github.event_name == 'release'
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then
+            echo "::warning::HOMEBREW_TAP_TOKEN isn't set, so the Homebrew cask wasn't updated."
+            exit 0
+          fi
+          SHA=$(shasum -a 256 "dist/Shortcut-Divan-$VERSION.dmg" | cut -d ' ' -f 1)
+          git clone --depth 1 "https://x-access-token:$TAP_TOKEN@github.com/codingwithsaeed/homebrew-tap.git" tap
+          mkdir -p tap/Casks
+          sed -e "s/@VERSION@/$VERSION/" -e "s/@SHA256@/$SHA/" packaging/homebrew/shortcut-divan.rb \
+            | grep -v '^# ' > tap/Casks/shortcut-divan.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/shortcut-divan.rb
+          git diff --cached --quiet || git commit -m "shortcut-divan $VERSION"
+          git push
 
       - name: Keep as a workflow artifact
         if: github.event_name != 'release'

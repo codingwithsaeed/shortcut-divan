@@ -6,10 +6,16 @@ struct Keycaps: View {
     let keys: String
     var accent: Color = .primary
     var size: CGFloat = 12.5
+    var fill = 0.22 // lighter in the widget's one-tone desktop look, so the keys stay readable
 
     enum Part: Hashable { case cap(String), gap, text(String) }
 
     static let symbols: Set<Character> = ["⌃", "⌥", "⇧", "⌘", "⇥", "↩", "⎋", "⌫", "␣", "←", "→", "↑", "↓"]
+
+    // A typed command ("cd -", "tinker") rather than a key: shown in a monospaced font.
+    static func isCommand(_ text: String) -> Bool {
+        text.count > 1 && !text.contains(where: symbols.contains) && text != "Space"
+    }
 
     static func parts(_ keys: String) -> [Part] {
         var parts: [Part] = []
@@ -42,19 +48,19 @@ struct Keycaps: View {
                 switch part {
                 case let .cap(text):
                     Text(verbatim: text)
-                        .font(.system(size: size, weight: .semibold, design: text.count > 1 && !text.contains(where: Self.symbols.contains) && text != "Space" ? .monospaced : .default))
+                        .font(Self.isCommand(text) ? .system(size: size, weight: .semibold, design: .monospaced) : .app(size, .semibold))
                         .frame(minWidth: size + 1.5)
                         .padding(.horizontal, size * 0.48)
                         .padding(.vertical, size * 0.24)
-                        .background(accent.opacity(0.22), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        .background(accent.opacity(fill), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .strokeBorder(accent.opacity(0.45), lineWidth: 0.5)
+                                .strokeBorder(accent.opacity(fill * 2), lineWidth: 0.5)
                         )
                 case .gap:
                     Color.clear.frame(width: 4, height: 1)
                 case let .text(text):
-                    Text(verbatim: text).font(.system(size: size)).foregroundStyle(.tertiary)
+                    Text(verbatim: text).font(.app(size)).foregroundStyle(.tertiary)
                 }
             }
         }

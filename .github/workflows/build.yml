@@ -1,0 +1,22 @@
+# Compiles the app and widget on every push to develop and feature branches, so a change
+# is known to build before it's tried on a Mac.
+name: Build
+
+on:
+  push:
+    branches: [develop, "feature/**", "fix/**"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-26 # Xcode 26: Liquid Glass
+    steps:
+      - uses: actions/checkout@v5
+      - name: Generate the Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Build
+        run: |
+          xcodebuild -project ShortcutDivan.xcodeproj -scheme ShortcutDivan -configuration Release \
+            -destination 'platform=macOS' -derivedDataPath build build

@@ -6,8 +6,16 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 xcodegen generate --quiet
-xcodebuild -project ShortcutDivan.xcodeproj -scheme ShortcutDivan -configuration Release \
-  -destination 'platform=macOS' -derivedDataPath build -quiet build
+# Xcode's own noise (simulator warnings and the like) goes to a log, shown only if the
+# build fails.
+LOG=$(mktemp -t shortcut-divan-build)
+if ! xcodebuild -project ShortcutDivan.xcodeproj -scheme ShortcutDivan -configuration Release \
+  -destination "platform=macOS,arch=$(uname -m)" -derivedDataPath build -quiet build >"$LOG" 2>&1; then
+  cat "$LOG"
+  echo "build failed (log: $LOG)" >&2
+  exit 1
+fi
+rm -f "$LOG"
 
 APP=~/Applications/"Shortcut Divan.app"
 pkill -x "Shortcut Divan" 2>/dev/null || true
