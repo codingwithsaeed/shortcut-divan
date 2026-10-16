@@ -101,6 +101,7 @@ struct DivanWindow: View {
             }
             .scrollIndicators(.never)
             .ignoresSafeArea(.container, edges: .top)
+            .toolbar(removing: .sidebarToggle) // the top bar has its own
             .noTopEdgeEffect()
             .environment(\.layoutDirection, .app)
             .navigationSplitViewColumnWidth(min: 230, ideal: 250)
@@ -125,15 +126,28 @@ struct DivanWindow: View {
                     .padding(.top, 10)
                     .environment(\.layoutDirection, .app)
                 }
-                // The search bar, pinned at the top where the title bar was; the cards
-                // scroll under it, softly blurred.
-                .safeAreaInset(edge: .top, spacing: 0) { topBar }
-                .ignoresSafeArea(.container, edges: .top)
-                .softTopEdgeEffect()
+                .safeAreaPadding(.top, Self.barHeight)
+                .noTopEdgeEffect()
                 .onChange(of: selected) { _, _ in
                     if let first = shown.first { proxy.scrollTo(store.sections[first.index].title, anchor: .top) }
                 }
             }
+            // The search bar, pinned at the top where the title bar was. The cards scroll
+            // under it and fade out into a second copy of the backdrop, so nothing shows
+            // through the bar's glass and no band marks where it starts.
+            .overlay(alignment: .top) {
+                Backdrop()
+                    .mask(alignment: .top) {
+                        VStack(spacing: 0) {
+                            Color.black.frame(height: Self.barHeight - 6)
+                            LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                                .frame(height: 22)
+                        }
+                    }
+                    .allowsHitTesting(false)
+            }
+            .overlay(alignment: .top) { topBar }
+            .ignoresSafeArea(.container, edges: .top)
             .background(Backdrop())
         }
         .navigationTitle("Shortcut Divan")
@@ -195,6 +209,8 @@ struct DivanWindow: View {
 
     // Sidebar toggle, search field, theme, language, settings. With the sidebar hidden, it
     // keeps clear of the window buttons.
+    static let barHeight: CGFloat = 10 + SearchField.height + 8
+
     var topBar: some View {
         HStack(spacing: 12) {
             Button {
@@ -217,6 +233,7 @@ struct DivanWindow: View {
         }
         .padding(.leading, columns == .detailOnly ? 96 : 28)
         .padding(.trailing, 28)
+        .frame(height: Self.barHeight - 10 - 8)
         .padding(.top, 10)
         .padding(.bottom, 8)
         .movesWindow()
@@ -833,10 +850,6 @@ extension View {
 
     @ViewBuilder func noTopEdgeEffect() -> some View {
         if #available(macOS 26, *) { scrollEdgeEffectHidden(true, for: .top) } else { self }
-    }
-
-    @ViewBuilder func softTopEdgeEffect() -> some View {
-        if #available(macOS 26, *) { scrollEdgeEffectStyle(.soft, for: .top) } else { self }
     }
 }
 
