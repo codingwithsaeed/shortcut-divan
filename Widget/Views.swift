@@ -41,6 +41,7 @@ struct SectionView: View {
     let section: Section
     let style: Style
     let perPage: Int
+    let width: CGFloat
     let key: String
     let page: Int
 
@@ -71,7 +72,7 @@ struct SectionView: View {
 
             VStack(spacing: 0) {
                 ForEach(Array(shown.enumerated()), id: \.offset) { index, row in
-                    RowView(row: row, accent: accent, size: style.font, fill: vibrant ? 0.10 : 0.22)
+                    RowView(row: row, accent: accent, size: style.font, fill: vibrant ? 0.10 : 0.22, width: width)
                         .frame(height: style.row)
                         .overlay(alignment: .top) {
                             if style.rules && index > 0 { Divider().opacity(0.5) }
@@ -130,21 +131,40 @@ struct IconButton<Intent: AppIntent>: View {
 }
 
 // What it does, then its keys as keycaps, as in the app.
+// Long keys never push the row past the widget's edge: the description keeps at least
+// `share` of the width, and the keys step down until they fit in the rest: all of them,
+// then only the first option of several ("⌘Z / ⇧⌘Z" shows ⌘Z), then smaller, then as text
+// that shrinks to fit.
 struct RowView: View {
     let row: Shortcut
     let accent: Color
     let size: CGFloat
     let fill: Double
+    let width: CGFloat
+
+    static let share = 0.4
 
     var body: some View {
+        let first = row.keys.components(separatedBy: " / ").first ?? row.keys
         HStack(spacing: 8) {
             Text(verbatim: row.desc)
                 .font(.app(size, .medium))
                 .lineLimit(1)
+                .frame(minWidth: width * Self.share, alignment: .leading)
             Spacer(minLength: 4)
-            Keycaps(keys: row.keys, accent: accent, size: size - 1, fill: fill)
-                .widgetAccentable()
+            ViewThatFits(in: .horizontal) {
+                Keycaps(keys: row.keys, accent: accent, size: size - 1, fill: fill)
+                Keycaps(keys: first, accent: accent, size: size - 1, fill: fill)
+                Keycaps(keys: first, accent: accent, size: size - 3, fill: fill)
+                Text(verbatim: KeyText.spaced(first))
+                    .font(.app(size - 1, .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+            }
+            .layoutPriority(1)
+            .widgetAccentable()
         }
+        .frame(width: width)
     }
 }
 
@@ -188,9 +208,12 @@ struct SectionsContent: View {
         } else {
             GeometryReader { space in
                 let perPage = style.rows(in: space.size.height)
-                HStack(alignment: .top, spacing: 28) {
-                    ForEach(family == .systemExtraLarge ? entry.sections : [entry.sections[0]]) {
-                        SectionView(section: $0, style: style, perPage: perPage, key: entry.key, page: entry.page)
+                let shown = family == .systemExtraLarge ? entry.sections : [entry.sections[0]]
+                let gap: CGFloat = 28
+                let width = (space.size.width - gap * CGFloat(shown.count - 1)) / CGFloat(shown.count)
+                HStack(alignment: .top, spacing: gap) {
+                    ForEach(shown) {
+                        SectionView(section: $0, style: style, perPage: perPage, width: width, key: entry.key, page: entry.page)
                     }
                 }
             }
