@@ -21,26 +21,6 @@
         }
       }
     },
-    "Add Missing Default Shortcuts": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "افزودن میان‌برهای پیش‌فرضِ جاافتاده"
-          }
-        }
-      }
-    },
-    "Added %lld default shortcuts.": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld میان‌بر پیش‌فرض اضافه شد."
-          }
-        }
-      }
-    },
     "Add Shortcut": {
       "localizations": {
         "fa": {
@@ -707,16 +687,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "ویجت"
-          }
-        }
-      }
-    },
-    "You already have all the default shortcuts.": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "همهٔ میان‌برهای پیش‌فرض را از قبل دارید."
           }
         }
       }
