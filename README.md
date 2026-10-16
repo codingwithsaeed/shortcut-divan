@@ -22,6 +22,17 @@ English and Persian.
 
 ## Install
 
+With [Homebrew](https://brew.sh):
+
+```sh
+brew install --cask codingwithsaeed/tap/shortcut-divan
+```
+
+Then open it once, and right-click the desktop › **Edit Widgets** › **Shortcut Divan**.
+`brew upgrade --cask shortcut-divan` updates it.
+
+Or by hand:
+
 1. Download `Shortcut-Divan-<version>.dmg` from [Releases](../../releases/latest) and drag the
    app to Applications.
 2. The app isn't signed with an Apple Developer ID, so the first time macOS refuses to open it.
@@ -79,6 +90,10 @@ it:
 gh release create v1.0.0 --generate-notes
 ```
 
+It also updates the Homebrew cask in
+[codingwithsaeed/homebrew-tap](https://github.com/codingwithsaeed/homebrew-tap), from
+`packaging/homebrew/shortcut-divan.rb`, when the `HOMEBREW_TAP_TOKEN` secret is set.
+
 ## License
 
 MIT
@@ -102,6 +117,20 @@ MIT
 - **ورود و خروجی گرفتن** با همان قالب فایل.
 
 ### نصب
+
+با هوم‌برو این دستور را اجرا کنید:
+
+</div>
+
+```sh
+brew install --cask codingwithsaeed/tap/shortcut-divan
+```
+
+<div dir="rtl">
+
+بعد برنامه را یک‌بار باز کنید و ابزارک را از منوی ویرایش ویجت‌های دسکتاپ اضافه کنید. برای به‌روزرسانی هم دستور ارتقای هوم‌برو کافی است.
+
+یا به‌صورت دستی:
 
 ۱. فایل نصبی را از [صفحهٔ انتشارها](../../releases/latest) بگیرید و برنامه را به پوشهٔ برنامه‌ها بکشید.
 
