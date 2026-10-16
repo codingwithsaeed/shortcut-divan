@@ -81,80 +81,95 @@ struct DivanWindow: View {
     @State private var deleting: Editing?
 
     @FocusState private var searching: Bool
-    @State private var columns = NavigationSplitViewVisibility.all
+    @State private var sidebarShown = true
     @State private var columnWidth: CGFloat = 0
     @State private var contentWidth: CGFloat = 0
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columns) {
-            ScrollView {
-                SidebarCard(
-                    sections: store.sections, total: total, selected: $selected,
-                    add: { editing = .section(nil) }, menu: { sectionMenu($0) }
-                ) { from, to in
-                    withAnimation(.snappy) {
-                        store.sections.move(fromOffsets: [from], toOffset: to > from ? to + 1 : to)
-                    }
-                    store.commit()
-                }
-                .padding(.horizontal, 12)
-                .padding(.top, Self.cardsTop) // level with the first section card
-                .padding(.bottom, 8)
-            }
-            .scrollIndicators(.never)
-            .ignoresSafeArea(.container, edges: .top)
-            .toolbar(removing: .sidebarToggle) // the top bar has its own
-            .noTopEdgeEffect()
-            .environment(\.layoutDirection, .app)
-            .navigationSplitViewColumnWidth(min: 230, ideal: 250)
-        } detail: {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 22) {
-                        ForEach(shown, id: \.index) { item in
-                            SectionTable(
-                                section: store.sections[item.index], index: item.index, rows: item.rows,
-                                edit: { editing = $0 }, delete: { deleting = $0 },
-                                menu: { sectionMenu(item.index) }
-                            )
-                            .id(store.sections[item.index].title)
+        // One backdrop under the whole window, so the sidebar and the cards sit on the same
+        // colors; a hairline with a soft shadow is all that parts them.
+        ZStack(alignment: .topLeading) {
+            HStack(spacing: 0) {
+                if sidebarShown {
+                    ScrollView {
+                        SidebarCard(
+                            sections: store.sections, total: total, selected: $selected,
+                            add: { editing = .section(nil) }, menu: { sectionMenu($0) }
+                        ) { from, to in
+                            withAnimation(.snappy) {
+                                store.sections.move(fromOffsets: [from], toOffset: to > from ? to + 1 : to)
+                            }
+                            store.commit()
                         }
-                        if shown.isEmpty && !query.isEmpty {
-                            Text("Nothing matches “\(query)”.").foregroundStyle(.secondary)
-                        }
+                        .padding(.horizontal, 12)
+                        .padding(.top, Self.cardsTop) // level with the first section card
+                        .padding(.bottom, 12)
                     }
-                    .padding(.horizontal, 28)
-                    .padding(.bottom, 28)
-                    .padding(.top, Self.cardsTop - Self.barHeight)
-                    .frame(maxWidth: .infinity)
-                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { contentWidth = $0 }
-                    .environment(\.layoutDirection, .app)
+                    .scrollIndicators(.never)
+                    .frame(width: Self.sidebarWidth)
+                    .transition(.move(edge: .leading).combined(with: .opacity))
+                    Color.clear.frame(width: 1)
                 }
-                .safeAreaPadding(.top, Self.barHeight)
-                .noTopEdgeEffect()
-                .onChange(of: selected) { _, _ in
-                    if let first = shown.first { proxy.scrollTo(store.sections[first.index].title, anchor: .top) }
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 22) {
+                            ForEach(shown, id: \.index) { item in
+                                SectionTable(
+                                    section: store.sections[item.index], index: item.index, rows: item.rows,
+                                    edit: { editing = $0 }, delete: { deleting = $0 },
+                                    menu: { sectionMenu(item.index) }
+                                )
+                                .id(store.sections[item.index].title)
+                            }
+                            if shown.isEmpty && !query.isEmpty {
+                                Text("Nothing matches “\(query)”.").foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.horizontal, 28)
+                        .padding(.bottom, 28)
+                        .padding(.top, Self.cardsTop - Self.barHeight)
+                        .frame(maxWidth: .infinity)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { contentWidth = $0 }
+                        .environment(\.layoutDirection, .app)
+                    }
+                    .safeAreaPadding(.top, Self.barHeight)
+                    .noTopEdgeEffect()
+                    .onChange(of: selected) { _, _ in
+                        if let first = shown.first { proxy.scrollTo(store.sections[first.index].title, anchor: .top) }
+                    }
                 }
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { columnWidth = $0 }
             }
-            // The search bar, pinned at the top where the title bar was. The cards scroll
-            // under it and fade out into a second copy of the backdrop, so nothing shows
+            // The search bar, pinned at the top where the title bar was. Everything scrolls
+            // under it and fades out into a second copy of the backdrop, so nothing shows
             // through the bar's glass and no band marks where it starts.
-            .overlay(alignment: .top) {
-                Backdrop()
-                    .mask(alignment: .top) {
-                        VStack(spacing: 0) {
-                            Color.black.frame(height: Self.barHeight - 6)
-                            LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
-                                .frame(height: 22)
-                        }
+            Backdrop()
+                .mask(alignment: .top) {
+                    VStack(spacing: 0) {
+                        Color.black.frame(height: Self.barHeight - 6)
+                        LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                            .frame(height: 22)
                     }
+                }
+                .allowsHitTesting(false)
+            if sidebarShown {
+                Rectangle()
+                    .fill(.separator)
+                    .frame(width: 1)
+                    .shadow(color: .black.opacity(0.12), radius: 6)
+                    .padding(.leading, Self.sidebarWidth)
                     .allowsHitTesting(false)
             }
-            .overlay(alignment: .top) { topBar }
-            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { columnWidth = $0 }
-            .ignoresSafeArea(.container, edges: .top)
-            .background(Backdrop())
+            if sidebarShown {
+                // The strip above the sidebar card moves the window too.
+                Color.clear.frame(width: Self.sidebarWidth, height: Self.barHeight).movesWindow()
+            }
+            topBar
+                .padding(.leading, sidebarShown ? Self.sidebarWidth + 1 : 0)
         }
+        .environment(\.layoutDirection, .app)
+        .ignoresSafeArea(.container, edges: .top)
+        .background(Backdrop())
         .navigationTitle("Shortcut Divan")
         .hidingTitle()
         .clearToolbar()
@@ -216,11 +231,12 @@ struct DivanWindow: View {
     // keeps clear of the window buttons.
     static let barHeight: CGFloat = 10 + SearchField.height + 8
     static let cardsTop = barHeight + 10 // where the first card and the sidebar card start
+    static let sidebarWidth: CGFloat = 250
 
     var topBar: some View {
         HStack(spacing: 12) {
             Button {
-                withAnimation { columns = columns == .detailOnly ? .all : .detailOnly }
+                withAnimation(.snappy) { sidebarShown.toggle() }
             } label: {
                 GlassIcon(symbol: "sidebar.leading", size: SearchField.height)
             }
@@ -237,7 +253,7 @@ struct DivanWindow: View {
             }
             .focusable(false)
         }
-        .padding(.leading, columns == .detailOnly ? 96 : 28)
+        .padding(.leading, sidebarShown ? 28 : 96)
         // A visible scroll bar narrows the cards; the bar narrows with them, so its last
         // button lines up with the cards' right edge (left, in Persian).
         .padding(.trailing, 28 + max(0, columnWidth - contentWidth))
