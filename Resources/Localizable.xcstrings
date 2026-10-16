@@ -431,6 +431,16 @@
         }
       }
     },
+    "Previous Section": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بخش قبلی"
+          }
+        }
+      }
+    },
     "Purple": {
       "localizations": {
         "fa": {

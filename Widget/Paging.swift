@@ -21,6 +21,14 @@ enum Positions {
         change(&position)
         UserDefaults.standard.set(try? JSONEncoder().encode(position), forKey: "position." + key)
     }
+
+    // To another section, on its first page.
+    static func step(_ key: String, by delta: Int) {
+        update(key) {
+            $0.shift += delta
+            $0.page = 0
+        }
+    }
 }
 
 struct TurnPage: AppIntent {
@@ -53,10 +61,22 @@ struct NextSection: AppIntent {
     init(key: String) { self.key = key }
 
     func perform() async throws -> some IntentResult {
-        Positions.update(key) {
-            $0.shift += 1
-            $0.page = 0
-        }
+        Positions.step(key, by: 1)
+        return .result()
+    }
+}
+
+struct PreviousSection: AppIntent {
+    static let title: LocalizedStringResource = "Previous Section"
+    static let isDiscoverable = false
+
+    @Parameter(title: "Widget") var key: String
+
+    init() {}
+    init(key: String) { self.key = key }
+
+    func perform() async throws -> some IntentResult {
+        Positions.step(key, by: -1)
         return .result()
     }
 }
