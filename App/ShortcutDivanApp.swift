@@ -81,12 +81,12 @@ struct DivanWindow: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $selected) {
-                SidebarRow(title: "All Shortcuts", symbol: "square.grid.2x2.fill", accent: "iris", count: total)
+                SidebarRow(title: "All Shortcuts", symbol: "square.stack", count: total)
                     .tag(Self.all)
                 SwiftUI.Section {
                     ForEach(Array(store.sections.enumerated()), id: \.offset) { index, section in
                         SidebarRow(
-                            title: LocalizedStringKey(section.title), verbatim: section.title, symbol: "command",
+                            title: LocalizedStringKey(section.title), verbatim: section.title,
                             accent: section.accent, count: section.rows.filter { $0.only == nil }.count
                         )
                         .tag(section.title)
@@ -96,7 +96,7 @@ struct DivanWindow: View {
                         Label {
                             Text("New Section")
                         } icon: {
-                            Image(systemName: "plus").frame(width: 20).foregroundStyle(.secondary)
+                            Image(systemName: "plus").frame(width: 16).foregroundStyle(.secondary)
                         }
                         .foregroundStyle(.secondary)
                     }
@@ -111,7 +111,18 @@ struct DivanWindow: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 22) {
-                        SearchField(text: $query, focus: $searching)
+                        HStack(spacing: 12) {
+                            SearchField(text: $query, focus: $searching)
+                            GlassGroup {
+                                ThemeButton().labelStyle(.iconOnly).glassCircle()
+                                LanguageMenu().labelStyle(.iconOnly).menuIndicator(.hidden).glassCircle()
+                                SettingsLink { Label("Settings", systemImage: "gearshape") }
+                                    .labelStyle(.iconOnly)
+                                    .glassCircle()
+                                    .help("Settings")
+                            }
+                            .focusable(false)
+                        }
                         ForEach(shown, id: \.index) { item in
                             SectionTable(
                                 section: store.sections[item.index], index: item.index, rows: item.rows,
@@ -133,16 +144,7 @@ struct DivanWindow: View {
                     if let first = shown.first { proxy.scrollTo(store.sections[first.index].title, anchor: .top) }
                 }
             }
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    ControlGroup {
-                        ThemeButton()
-                        LanguageMenu()
-                        SettingsLink { Label("Settings", systemImage: "gearshape") }
-                            .help("Settings")
-                    }
-                }
-            }
+            .background(Backdrop())
         }
         .navigationTitle("Shortcut Divan")
         .hidingTitle()
@@ -247,12 +249,15 @@ struct SectionTable<Menu: View>: View {
         let accent = Color.rosePine(section.accent)
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                RoundedRectangle(cornerRadius: 2, style: .continuous).fill(accent).frame(width: 4, height: 16)
+                Circle().fill(accent).frame(width: 9, height: 9)
                 Text(verbatim: section.title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 15, weight: .bold))
                 Text(verbatim: rows.count.formatted())
-                    .font(.system(size: 12).monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(accent.opacity(0.15), in: Capsule())
+                    .foregroundStyle(accent)
                 Spacer(minLength: 0)
                 GlassGroup {
                     Button("Add Shortcut", systemImage: "plus") { edit(.row(section: index, row: nil)) }
@@ -268,11 +273,9 @@ struct SectionTable<Menu: View>: View {
                         .fixedSize()
                 }
             }
-            .padding(.leading, 14)
-            .padding(.trailing, 10)
-            .padding(.vertical, 8)
-
-            Divider()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(accent.opacity(0.12))
 
             if rows.isEmpty {
                 Text("No shortcuts yet.")
@@ -280,6 +283,17 @@ struct SectionTable<Menu: View>: View {
                     .frame(maxWidth: .infinity)
                     .padding(18)
             } else {
+                HStack {
+                    Text("Description")
+                    Spacer(minLength: 0)
+                    Text("Keys")
+                }
+                .font(.system(size: 11, weight: .semibold))
+                .textCase(.uppercase)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 7)
+                Divider()
                 VStack(spacing: 0) {
                     ForEach(Array(rows.enumerated()), id: \.element) { position, row in
                         if position > 0 { Divider().opacity(0.5).padding(.horizontal, 14) }
@@ -293,8 +307,8 @@ struct SectionTable<Menu: View>: View {
                 .padding(.vertical, 4)
             }
         }
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(.separator.opacity(0.6)))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .glassCard(cornerRadius: 16)
     }
 }
 
@@ -321,8 +335,8 @@ struct RowLine: View {
             .opacity(hovering ? 1 : 0)
             Keycaps(keys: shortcut.keys)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(hovering ? AnyShapeStyle(.quaternary.opacity(0.5)) : AnyShapeStyle(.clear))
@@ -505,22 +519,23 @@ enum Theme: String, CaseIterable {
     }
 }
 
-// Every sidebar row: a colored tile with a white symbol, the name, and a count.
+// Every sidebar row: a section's color dot (or a symbol), the name, and a count.
 struct SidebarRow: View {
     var title: LocalizedStringKey
     var verbatim: String?
-    let symbol: String
-    let accent: String
+    var symbol: String?
+    var accent = "iris"
     let count: Int
 
     var body: some View {
         Label {
             if let verbatim { Text(verbatim: verbatim) } else { Text(title) }
         } icon: {
-            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .fill(Color.rosePine(accent).gradient)
-                .frame(width: 20, height: 20)
-                .overlay(Image(systemName: symbol).font(.system(size: 10, weight: .bold)).foregroundStyle(.white))
+            if let symbol {
+                Image(systemName: symbol).foregroundStyle(.secondary).frame(width: 16)
+            } else {
+                Circle().fill(Color.rosePine(accent)).frame(width: 9, height: 9).frame(width: 16)
+            }
         }
         .badge(count)
     }
@@ -554,11 +569,7 @@ struct SearchField: View {
         }
         .padding(.horizontal, 14)
         .frame(height: 42)
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(focus.wrappedValue ? AnyShapeStyle(Color.accentColor.opacity(0.6)) : AnyShapeStyle(.separator.opacity(0.6)))
-        )
+        .glassCard(cornerRadius: 21)
     }
 }
 
@@ -703,5 +714,33 @@ extension View {
     // No title in the toolbar: the search field and the cards say where you are.
     @ViewBuilder func hidingTitle() -> some View {
         if #available(macOS 15, *) { toolbar(removing: .title) } else { self }
+    }
+}
+
+// Liquid Glass on macOS 26; a frosted material before that.
+extension View {
+    @ViewBuilder func glassCard(cornerRadius: CGFloat) -> some View {
+        if #available(macOS 26, *) {
+            glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+        } else {
+            background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
+                .overlay(RoundedRectangle(cornerRadius: cornerRadius).strokeBorder(.separator))
+        }
+    }
+}
+
+// Soft Rosé Pine color behind the cards, so the glass has something to show.
+struct Backdrop: View {
+    var body: some View {
+        ZStack {
+            Rectangle().fill(.background)
+            Circle().fill(Color.rosePine("iris").opacity(0.22)).frame(width: 520).blur(radius: 120)
+                .offset(x: -220, y: -200)
+            Circle().fill(Color.rosePine("rose").opacity(0.20)).frame(width: 460).blur(radius: 120)
+                .offset(x: 260, y: 60)
+            Circle().fill(Color.rosePine("foam").opacity(0.18)).frame(width: 420).blur(radius: 120)
+                .offset(x: -60, y: 320)
+        }
+        .ignoresSafeArea()
     }
 }
