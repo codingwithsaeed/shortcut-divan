@@ -30,6 +30,9 @@ struct ShortcutDivanApp: App {
             DivanWindow()
         }
         .defaultSize(width: 860, height: 600)
+        // No title bar: the search bar sits where it would be, and stays there as the
+        // sections scroll under it.
+        .windowStyle(.hiddenTitleBar)
 
         Settings {
             SettingsView()
@@ -78,9 +81,10 @@ struct DivanWindow: View {
     @State private var deleting: Editing?
 
     @FocusState private var searching: Bool
+    @State private var columns = NavigationSplitViewVisibility.all
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columns) {
             ScrollView {
                 SidebarCard(
                     sections: store.sections, total: total, selected: $selected,
@@ -92,9 +96,11 @@ struct DivanWindow: View {
                     store.commit()
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.top, 44) // below the window buttons
+                .padding(.bottom, 8)
             }
             .scrollIndicators(.never)
+            .ignoresSafeArea(.container, edges: .top)
             .noTopEdgeEffect()
             .environment(\.layoutDirection, .app)
             .navigationSplitViewColumnWidth(min: 230, ideal: 250)
@@ -102,17 +108,6 @@ struct DivanWindow: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 22) {
-                        HStack(spacing: 12) {
-                            SearchField(text: $query, focus: $searching)
-                            GlassGroup {
-                                ThemeButton(size: SearchField.height)
-                                LanguageMenu(size: SearchField.height)
-                                SettingsLink { GlassIcon(symbol: "gearshape", size: SearchField.height) }
-                                    .glassDisc()
-                                    .help("Settings")
-                            }
-                            .focusable(false)
-                        }
                         ForEach(shown, id: \.index) { item in
                             SectionTable(
                                 section: store.sections[item.index], index: item.index, rows: item.rows,
@@ -127,10 +122,14 @@ struct DivanWindow: View {
                     }
                     .padding(.horizontal, 28)
                     .padding(.bottom, 28)
-                    .padding(.top, 6)
+                    .padding(.top, 10)
                     .environment(\.layoutDirection, .app)
                 }
-                .noTopEdgeEffect()
+                // The search bar, pinned at the top where the title bar was; the cards
+                // scroll under it, softly blurred.
+                .safeAreaInset(edge: .top, spacing: 0) { topBar }
+                .ignoresSafeArea(.container, edges: .top)
+                .softTopEdgeEffect()
                 .onChange(of: selected) { _, _ in
                     if let first = shown.first { proxy.scrollTo(store.sections[first.index].title, anchor: .top) }
                 }
@@ -192,6 +191,36 @@ struct DivanWindow: View {
         .onExitCommand { if query.isEmpty { NSApp.keyWindow?.close() } else { query = "" } }
         .onAppear { Theme.current.apply() }
         .frame(minWidth: 680, minHeight: 480)
+    }
+
+    // Sidebar toggle, search field, theme, language, settings. With the sidebar hidden, it
+    // keeps clear of the window buttons.
+    var topBar: some View {
+        HStack(spacing: 12) {
+            Button {
+                withAnimation { columns = columns == .detailOnly ? .all : .detailOnly }
+            } label: {
+                GlassIcon(symbol: "sidebar.leading", size: SearchField.height)
+            }
+            .glassDisc()
+            .focusable(false)
+            .help("Toggle Sidebar")
+            SearchField(text: $query, focus: $searching)
+            GlassGroup {
+                ThemeButton(size: SearchField.height)
+                LanguageMenu(size: SearchField.height)
+                SettingsLink { GlassIcon(symbol: "gearshape", size: SearchField.height) }
+                    .glassDisc()
+                    .help("Settings")
+            }
+            .focusable(false)
+        }
+        .padding(.leading, columns == .detailOnly ? 96 : 28)
+        .padding(.trailing, 28)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
+        .movesWindow()
+        .environment(\.layoutDirection, .app)
     }
 
     @ViewBuilder func sectionMenu(_ index: Int) -> some View {
@@ -804,6 +833,17 @@ extension View {
 
     @ViewBuilder func noTopEdgeEffect() -> some View {
         if #available(macOS 26, *) { scrollEdgeEffectHidden(true, for: .top) } else { self }
+    }
+
+    @ViewBuilder func softTopEdgeEffect() -> some View {
+        if #available(macOS 26, *) { scrollEdgeEffectStyle(.soft, for: .top) } else { self }
+    }
+}
+
+extension View {
+    // Without a title bar, the window moves by dragging an empty spot of the top bar (macOS 15).
+    @ViewBuilder func movesWindow() -> some View {
+        if #available(macOS 15, *) { contentShape(Rectangle()).gesture(WindowDragGesture()) } else { self }
     }
 }
 

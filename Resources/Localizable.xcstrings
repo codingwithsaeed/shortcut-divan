@@ -661,6 +661,16 @@
         }
       }
     },
+    "Toggle Sidebar": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نمایش یا پنهان کردن نوار کناری"
+          }
+        }
+      }
+    },
     "Turn Page": {
       "localizations": {
         "fa": {
