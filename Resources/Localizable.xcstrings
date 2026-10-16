@@ -611,6 +611,86 @@
           }
         }
       }
+    },
+    "Sections": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بخش‌ها"
+          }
+        }
+      }
+    },
+    "Settings": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تنظیمات"
+          }
+        }
+      }
+    },
+    "%lld shortcuts": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld میان‌بر"
+          }
+        }
+      }
+    },
+    "All Shortcuts": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "همهٔ میان‌برها"
+          }
+        }
+      }
+    },
+    "Appearance": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ظاهر"
+          }
+        }
+      }
+    },
+    "Shortcuts File": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فایل میان‌برها"
+          }
+        }
+      }
+    },
+    "Kept by the app": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "در خود برنامه نگه داشته می‌شود"
+          }
+        }
+      }
+    },
+    "A followed file is read, watched for changes, and saved back to when you edit here.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فایلی که دنبالش می‌کنید خوانده می‌شود، تغییراتش دنبال می‌شود و ویرایش‌های اینجا در همان ذخیره می‌شود."
+          }
+        }
+      }
     }
   }
 }

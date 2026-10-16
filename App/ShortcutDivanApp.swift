@@ -28,7 +28,11 @@ struct ShortcutDivanApp: App {
         Window("Shortcut Divan", id: "main") {
             DivanWindow()
         }
-        .defaultSize(width: 780, height: 580)
+        .defaultSize(width: 860, height: 600)
+
+        Settings {
+            SettingsView()
+        }
         .commands {
             CommandGroup(replacing: .importExport) {
                 Button("Import…") { store.importFile() }
@@ -63,25 +67,38 @@ enum Editing: Identifiable {
 
 struct DivanWindow: View {
     @Bindable private var store = Store.shared
-    @State private var selected: String?
+    @State private var selected: String? = Self.all
     @State private var query = ""
+
+    static let all = "\u{0}all"
     @State private var editing: Editing?
     @State private var deleting: Editing?
 
     var body: some View {
         NavigationSplitView {
-            List(Array(store.sections.enumerated()), id: \.offset, selection: $selected) { index, section in
-                Label {
-                    Text(verbatim: section.title)
-                } icon: {
-                    Circle().fill(Color.rosePine(section.accent)).frame(width: 8, height: 8)
+            List(selection: $selected) {
+                Label("All Shortcuts", systemImage: "square.grid.2x2")
+                    .badge(store.sections.reduce(0) { $0 + $1.rows.filter { $0.only == nil }.count })
+                    .tag(Self.all)
+                SwiftUI.Section("Sections") {
+                    ForEach(Array(store.sections.enumerated()), id: \.offset) { index, section in
+                        Label {
+                            Text(verbatim: section.title)
+                        } icon: {
+                            Image(systemName: "command.square.fill")
+                                .foregroundStyle(Color.rosePine(section.accent))
+                        }
+                        .badge(section.rows.filter { $0.only == nil }.count)
+                        .tag(section.title)
+                        .contextMenu { sectionMenu(index) }
+                    }
                 }
-                .tag(section.title)
-                .contextMenu { sectionMenu(index) }
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                SidebarBar(newSection: { editing = .section(nil) })
             }
             .environment(\.layoutDirection, .app)
-            .navigationSplitViewColumnWidth(min: 170, ideal: 200)
-            .safeAreaInset(edge: .bottom) { linkedFooter }
+            .navigationSplitViewColumnWidth(min: 220, ideal: 240)
         } detail: {
             ScrollViewReader { proxy in
                 ScrollView {
@@ -101,19 +118,12 @@ struct DivanWindow: View {
                     .padding(24)
                     .environment(\.layoutDirection, .app)
                 }
-                .background(Backdrop())
-                .onChange(of: selected) { _, title in
-                    guard let title else { return }
-                    withAnimation { proxy.scrollTo(title, anchor: .top) }
+                .onChange(of: selected) { _, _ in
+                    if let first = shown.first { proxy.scrollTo(store.sections[first.index].title, anchor: .top) }
                 }
             }
         }
         .searchable(text: $query, placement: .toolbar, prompt: Text("Search shortcuts"))
-        .toolbar {
-            ToolbarItem { ThemePicker() }
-            ToolbarItem { LanguageMenu() }
-            ToolbarItem { Button("New Section", systemImage: "plus") { editing = .section(nil) } }
-        }
         .sheet(item: $editing) { editing in
             Group {
                 switch editing {
@@ -165,26 +175,6 @@ struct DivanWindow: View {
         .frame(minWidth: 680, minHeight: 480)
     }
 
-    @ViewBuilder var linkedFooter: some View {
-        if let file = store.linkedFile {
-            HStack(spacing: 6) {
-                Image(systemName: "link")
-                Text("Following \(file.lastPathComponent)")
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .help(file.path)
-                Spacer(minLength: 0)
-                Button("Stop", systemImage: "xmark.circle.fill") { store.unlink() }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.borderless)
-                    .help("Stop following this file")
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .padding(10)
-        }
-    }
-
     @ViewBuilder func sectionMenu(_ index: Int) -> some View {
         Button("Add Shortcut…") { editing = .row(section: index, row: nil) }
         Button("Edit Section…") { editing = .section(index) }
@@ -211,7 +201,10 @@ struct DivanWindow: View {
                 let text = "\(section.title) \(shortcut.keys) \(shortcut.desc)".lowercased()
                 return shortcut.only == nil && words.allSatisfy { text.contains($0) }
             }
-            return words.isEmpty || !rows.isEmpty ? (index, rows) : nil
+            guard words.isEmpty || !rows.isEmpty else { return nil }
+            // A picked section shows alone, unless searching (search looks everywhere).
+            guard !words.isEmpty || selected == nil || selected == Self.all || selected == section.title else { return nil }
+            return (index, rows)
         }
     }
 }
@@ -284,8 +277,9 @@ struct SectionTable<Menu: View>: View {
                 }
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .glassCard(cornerRadius: 16)
+        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.separator))
     }
 }
 
@@ -423,6 +417,10 @@ enum Theme: String, CaseIterable {
 
     static var current: Theme { Theme(rawValue: UserDefaults.standard.string(forKey: "theme") ?? "") ?? .system }
 
+    var next: Theme { self == .system ? .light : self == .light ? .dark : .system }
+    var symbol: String { self == .system ? "circle.lefthalf.filled" : self == .light ? "sun.max.fill" : "moon.fill" }
+    var name: LocalizedStringKey { self == .system ? "Automatic" : self == .light ? "Light" : "Dark" }
+
     func apply() {
         UserDefaults.standard.set(rawValue, forKey: "theme")
         NSApp?.appearance = switch self {
@@ -433,27 +431,44 @@ enum Theme: String, CaseIterable {
     }
 }
 
-struct ThemePicker: View {
+// Bottom of the sidebar: add a section; theme, language and settings.
+struct SidebarBar: View {
+    let newSection: () -> Void
     @State private var theme = Theme.current
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
-        Picker("Theme", selection: $theme) {
-            Label("Automatic", systemImage: "circle.lefthalf.filled").tag(Theme.system)
-            Label("Light", systemImage: "sun.max.fill").tag(Theme.light)
-            Label("Dark", systemImage: "moon.fill").tag(Theme.dark)
+        HStack(spacing: 10) {
+            Button(action: newSection) { Label("New Section", systemImage: "plus") }
+                .help("New Section")
+            Spacer(minLength: 0)
+            Button {
+                theme = theme.next
+                theme.apply()
+            } label: {
+                Label("Theme", systemImage: theme.symbol)
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .help(theme.name)
+            LanguageMenu()
+            Button { openSettings() } label: { Label("Settings", systemImage: "gearshape") }
+                .help("Settings")
         }
-        .pickerStyle(.segmented)
         .labelStyle(.iconOnly)
-        .help("Theme")
-        .onChange(of: theme) { _, theme in theme.apply() }
+        .buttonStyle(.borderless)
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .font(.system(size: 14))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .overlay(alignment: .top) { Divider() }
     }
 }
 
-// Switching language restarts the app, so every text and the layout direction change together.
 struct LanguageMenu: View {
     var body: some View {
         Menu {
-            Picker("Language", selection: Binding { AppLanguage.chosen ?? "" } set: { switchTo($0) }) {
+            Picker("Language", selection: Binding { AppLanguage.chosen ?? "" } set: { LanguageSwitch.to($0) }) {
                 Text("System").tag("")
                 Text(verbatim: "English").tag("en")
                 Text(verbatim: "فارسی").tag("fa")
@@ -462,10 +477,68 @@ struct LanguageMenu: View {
         } label: {
             Label("Language", systemImage: "globe")
         }
+        .fixedSize()
         .help("Language")
     }
+}
 
-    func switchTo(_ language: String) {
+// ⌘, : appearance, language, and where the shortcuts live.
+struct SettingsView: View {
+    @Bindable private var store = Store.shared
+    @State private var theme = Theme.current
+    @State private var language = AppLanguage.chosen ?? ""
+
+    var body: some View {
+        Form {
+            SwiftUI.Section {
+                Picker("Appearance", selection: $theme) {
+                    Label("Automatic", systemImage: "circle.lefthalf.filled").tag(Theme.system)
+                    Label("Light", systemImage: "sun.max.fill").tag(Theme.light)
+                    Label("Dark", systemImage: "moon.fill").tag(Theme.dark)
+                }
+                .onChange(of: theme) { _, theme in theme.apply() }
+                Picker("Language", selection: $language) {
+                    Text("System").tag("")
+                    Text(verbatim: "English").tag("en")
+                    Text(verbatim: "فارسی").tag("fa")
+                }
+                .onChange(of: language) { _, language in LanguageSwitch.to(language) }
+            }
+            SwiftUI.Section {
+                LabeledContent("Shortcuts File") {
+                    if let file = store.linkedFile {
+                        Text(verbatim: file.path).truncationMode(.middle).lineLimit(1).help(file.path)
+                    } else {
+                        Text("Kept by the app")
+                    }
+                }
+                HStack {
+                    Button("Follow a Shortcuts File…") { store.link() }
+                    if store.linkedFile != nil { Button("Stop Following File") { store.unlink() } }
+                }
+            } footer: {
+                Text("A followed file is read, watched for changes, and saved back to when you edit here.")
+                    .foregroundStyle(.secondary)
+            }
+            SwiftUI.Section {
+                HStack {
+                    Button("Import…") { store.importFile() }
+                    Button("Export…") { store.exportFile() }
+                    Spacer()
+                    Button("Restore Default Shortcuts…", role: .destructive) { store.restoreDefaults() }
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .frame(width: 520)
+        .fixedSize(horizontal: false, vertical: true)
+        .environment(\.layoutDirection, .app)
+    }
+}
+
+// Switching language restarts the app, so every text and the layout direction change together.
+enum LanguageSwitch {
+    static func to(_ language: String) {
         guard language != (AppLanguage.chosen ?? "") else { return }
         let defaults = UserDefaults.standard
         if language.isEmpty {
@@ -482,18 +555,6 @@ struct LanguageMenu: View {
         configuration.createsNewApplicationInstance = true
         NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, _ in
             DispatchQueue.main.async { NSApp.terminate(nil) }
-        }
-    }
-}
-
-// Liquid Glass on macOS 26; a frosted material before that.
-extension View {
-    @ViewBuilder func glassCard(cornerRadius: CGFloat) -> some View {
-        if #available(macOS 26, *) {
-            glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
-        } else {
-            background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
-                .overlay(RoundedRectangle(cornerRadius: cornerRadius).strokeBorder(.separator))
         }
     }
 }
@@ -518,22 +579,6 @@ extension View {
         } else {
             buttonStyle(.borderless)
         }
-    }
-}
-
-// Soft Rosé Pine color behind the cards, so the glass has something to show.
-struct Backdrop: View {
-    var body: some View {
-        ZStack {
-            Rectangle().fill(.background)
-            Circle().fill(Color.rosePine("iris").opacity(0.22)).frame(width: 520).blur(radius: 120)
-                .offset(x: -220, y: -200)
-            Circle().fill(Color.rosePine("rose").opacity(0.20)).frame(width: 460).blur(radius: 120)
-                .offset(x: 260, y: 60)
-            Circle().fill(Color.rosePine("foam").opacity(0.18)).frame(width: 420).blur(radius: 120)
-                .offset(x: -60, y: 320)
-        }
-        .ignoresSafeArea()
     }
 }
 
