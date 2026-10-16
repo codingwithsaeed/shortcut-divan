@@ -7,7 +7,7 @@ English and Persian.
 
 ![The app](docs/app.png)
 
-![The widget in three sizes](docs/widget.png)
+![The widget in all four sizes](docs/widget.png)
 
 ## What it does
 
