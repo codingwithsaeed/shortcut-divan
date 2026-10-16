@@ -788,6 +788,10 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .buttonStyle(GlassButtonStyle())
+        // The main window's look: its colored backdrop behind glass groups.
+        .scrollContentBackground(.hidden)
+        .background(Backdrop())
         .frame(width: 520)
         .fixedSize(horizontal: false, vertical: true)
         .environment(\.layoutDirection, .app)
@@ -868,6 +872,19 @@ extension View {
         } else {
             background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
                 .overlay(RoundedRectangle(cornerRadius: cornerRadius).strokeBorder(.separator))
+        }
+    }
+}
+
+// Text buttons in glass capsules on macOS 26, like the round ones; bordered before.
+struct GlassButtonStyle: PrimitiveButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        if #available(macOS 26, *) {
+            Button(role: configuration.role, action: configuration.trigger) { configuration.label }
+                .buttonStyle(.glass)
+        } else {
+            Button(role: configuration.role, action: configuration.trigger) { configuration.label }
+                .buttonStyle(.bordered)
         }
     }
 }
