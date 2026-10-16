@@ -39,6 +39,16 @@ right-to-left layout in Persian (keycaps still read left to right). See README.m
   (en, fa). Every new user-facing string needs its Persian translation there.
 - `scripts/install.sh`: build and install to `~/Applications`, re-register the widget.
 
+## Design rules
+
+- Alignment matters a lot to the owner. Edges line up across the window: the top bar's
+  first and last buttons with the cards' edges (also when a scroll bar shows, and in
+  right-to-left), the sidebar card's top with the first section card, header buttons with
+  the keycaps below them. Check every change for this before pushing.
+- One look everywhere: the Rosé Pine backdrop, glass cards and round glass buttons; text
+  buttons use `TintButtonStyle`, key symbols look like keycaps. New windows and sheets use
+  `appLook()`.
+
 ## Data
 
 `~/Library/Application Support/Shortcut Divan/shortcuts.json` (the widget reads it), shape
