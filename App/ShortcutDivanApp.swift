@@ -71,34 +71,53 @@ struct DivanWindow: View {
     @State private var query = ""
 
     static let all = "\u{0}all"
+
+    var total: Int { store.sections.reduce(0) { $0 + $1.rows.filter { $0.only == nil }.count } }
     @State private var editing: Editing?
     @State private var deleting: Editing?
 
     var body: some View {
         NavigationSplitView {
             List(selection: $selected) {
-                Label("All Shortcuts", systemImage: "square.grid.2x2")
-                    .badge(store.sections.reduce(0) { $0 + $1.rows.filter { $0.only == nil }.count })
+                SidebarRow(title: "All Shortcuts", symbol: "square.grid.2x2.fill", accent: "iris", count: total)
                     .tag(Self.all)
-                SwiftUI.Section("Sections") {
+                SwiftUI.Section {
                     ForEach(Array(store.sections.enumerated()), id: \.offset) { index, section in
-                        Label {
-                            Text(verbatim: section.title)
-                        } icon: {
-                            Image(systemName: "command.square.fill")
-                                .foregroundStyle(Color.rosePine(section.accent))
-                        }
-                        .badge(section.rows.filter { $0.only == nil }.count)
+                        SidebarRow(
+                            title: LocalizedStringKey(section.title), verbatim: section.title, symbol: "command",
+                            accent: section.accent, count: section.rows.filter { $0.only == nil }.count
+                        )
                         .tag(section.title)
                         .contextMenu { sectionMenu(index) }
                     }
+                    Button { editing = .section(nil) } label: {
+                        Label {
+                            Text("New Section").foregroundStyle(.secondary)
+                        } icon: {
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .strokeBorder(.tertiary, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
+                                .frame(width: 24, height: 24)
+                                .overlay(Image(systemName: "plus").font(.system(size: 11, weight: .bold)).foregroundStyle(.secondary))
+                        }
+                        .font(.system(size: 13, weight: .medium))
+                        .padding(.vertical, 3)
+                    }
+                    .buttonStyle(.plain)
+                } header: {
+                    Text("Sections")
                 }
             }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                SidebarBar(newSection: { editing = .section(nil) })
+            .safeAreaInset(edge: .top, spacing: 0) { AppHeader(count: total) }
+            .toolbar {
+                ToolbarItemGroup {
+                    ThemeButton()
+                    LanguageMenu()
+                    SettingsLink { Label("Settings", systemImage: "gearshape") }
+                        .help("Settings")
+                }
             }
             .environment(\.layoutDirection, .app)
-            .navigationSplitViewColumnWidth(min: 220, ideal: 240)
+            .navigationSplitViewColumnWidth(min: 240, ideal: 260)
         } detail: {
             ScrollViewReader { proxy in
                 ScrollView {
@@ -123,6 +142,7 @@ struct DivanWindow: View {
                 }
             }
         }
+        .navigationTitle(selected == nil || selected == Self.all ? String(localized: "All Shortcuts") : selected ?? "")
         .searchable(text: $query, placement: .toolbar, prompt: Text("Search shortcuts"))
         .sheet(item: $editing) { editing in
             Group {
@@ -431,37 +451,63 @@ enum Theme: String, CaseIterable {
     }
 }
 
-// Bottom of the sidebar: add a section; theme, language and settings.
-struct SidebarBar: View {
-    let newSection: () -> Void
-    @State private var theme = Theme.current
-    @Environment(\.openSettings) private var openSettings
+// Top of the sidebar: the app's icon, name, and how many shortcuts it holds.
+struct AppHeader: View {
+    let count: Int
 
     var body: some View {
-        HStack(spacing: 10) {
-            Button(action: newSection) { Label("New Section", systemImage: "plus") }
-                .help("New Section")
-            Spacer(minLength: 0)
-            Button {
-                theme = theme.next
-                theme.apply()
-            } label: {
-                Label("Theme", systemImage: theme.symbol)
-                    .contentTransition(.symbolEffect(.replace))
+        HStack(spacing: 12) {
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .frame(width: 44, height: 44)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Shortcut Divan").font(.system(size: 15, weight: .semibold))
+                Text("\(count) shortcuts").font(.system(size: 12)).foregroundStyle(.secondary)
             }
-            .help(theme.name)
-            LanguageMenu()
-            Button { openSettings() } label: { Label("Settings", systemImage: "gearshape") }
-                .help("Settings")
+            Spacer(minLength: 0)
         }
-        .labelStyle(.iconOnly)
-        .buttonStyle(.borderless)
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .font(.system(size: 14))
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .overlay(alignment: .top) { Divider() }
+        .padding(.horizontal, 18)
+        .padding(.top, 4)
+        .padding(.bottom, 12)
+    }
+}
+
+// Every sidebar row: a colored tile with a white symbol, the name, and a count.
+struct SidebarRow: View {
+    var title: LocalizedStringKey
+    var verbatim: String?
+    let symbol: String
+    let accent: String
+    let count: Int
+
+    var body: some View {
+        Label {
+            if let verbatim { Text(verbatim: verbatim) } else { Text(title) }
+        } icon: {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color.rosePine(accent).gradient)
+                .frame(width: 24, height: 24)
+                .overlay(Image(systemName: symbol).font(.system(size: 12, weight: .bold)).foregroundStyle(.white))
+        }
+        .font(.system(size: 13, weight: .medium))
+        .badge(count)
+        .padding(.vertical, 3)
+    }
+}
+
+// Cycles automatic → light → dark.
+struct ThemeButton: View {
+    @State private var theme = Theme.current
+
+    var body: some View {
+        Button {
+            theme = theme.next
+            theme.apply()
+        } label: {
+            Label("Theme", systemImage: theme.symbol)
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .help(theme.name)
     }
 }
 
