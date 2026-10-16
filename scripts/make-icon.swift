@@ -72,7 +72,7 @@ let icon: [String: Any] = [
             "name": "Key",
             "layers": [
                 ["name": "Glyphs", "image-name": "command.png", "glass": false,
-                 "fill-specializations": appearances(light: ["solid": p3(0x57408a)], dark: ["solid": p3(0xc4a7e7)])],
+                 "fill-specializations": appearances(light: ["solid": p3(0x57408a)], dark: ["solid": p3(0xffffff)])],
                 ["name": "Key", "image-name": "key.png", "glass": true,
                  "fill-specializations": appearances(light: ["automatic-gradient": p3(0xfffaf3, 0.95)],
                                                      dark: ["automatic-gradient": p3(0x403d52, 0.9)])],

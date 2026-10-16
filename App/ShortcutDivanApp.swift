@@ -294,7 +294,7 @@ struct SectionTable<Menu: View>: View {
                     ForEach(Array(rows.enumerated()), id: \.element) { position, row in
                         if position > 0 { Divider().opacity(0.5).padding(.horizontal, 14) }
                         RowLine(
-                            shortcut: section.rows[row],
+                            shortcut: section.rows[row], accent: accent,
                             edit: { edit(.row(section: index, row: row)) },
                             delete: { delete(.row(section: index, row: row)) }
                         )
@@ -311,6 +311,7 @@ struct SectionTable<Menu: View>: View {
 // One shortcut: what it does, then its keys as keycaps. Edit by double-click, hover buttons, or right-click.
 struct RowLine: View {
     let shortcut: Shortcut
+    let accent: Color
     let edit: () -> Void
     let delete: () -> Void
     @State private var hovering = false
@@ -321,23 +322,15 @@ struct RowLine: View {
                 .font(.system(size: 13.5))
                 .lineLimit(1)
             Spacer(minLength: 12)
-            GlassGroup {
-                Button(action: edit) { GlassIcon(symbol: "pencil", size: 26) }
-                    .glassDisc()
-                    .help("Edit")
-                Button(action: delete) { GlassIcon(symbol: "trash", size: 26) }
-                    .glassDisc()
-                    .help("Delete")
-            }
-            .focusable(false)
-            .opacity(hovering ? 1 : 0)
-            Keycaps(keys: shortcut.keys)
+            RowActions(edit: edit, delete: delete)
+                .opacity(hovering ? 1 : 0)
+            Keycaps(keys: shortcut.keys, accent: accent)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(hovering ? AnyShapeStyle(.quaternary.opacity(0.5)) : AnyShapeStyle(.clear))
+                .fill(hovering ? accent.opacity(0.12) : .clear)
                 .padding(.horizontal, 4)
         )
         .contentShape(Rectangle())
@@ -350,9 +343,37 @@ struct RowLine: View {
     }
 }
 
+// Edit and delete, shown on hover: one small glass capsule, the delete half red.
+struct RowActions: View {
+    let edit: () -> Void
+    let delete: () -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Button(action: edit) { face("pencil") }
+                .help("Edit")
+            Divider().frame(height: 14)
+            Button(action: delete) { face("trash").foregroundStyle(.red) }
+                .help("Delete")
+        }
+        .buttonStyle(.plain)
+        .focusable(false)
+        .fixedSize()
+        .glassCapsule()
+    }
+
+    func face(_ symbol: String) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 11.5, weight: .medium))
+            .frame(width: 30, height: 24)
+            .contentShape(Rectangle())
+    }
+}
+
 // "⇧⌘Z / ⌘Z" as ⇧ ⌘ Z keycaps, a slash, and ⌘ Z keycaps. Typed commands ("cd -") stay one cap.
 struct Keycaps: View {
     let keys: String
+    var accent: Color = .primary
 
     enum Part: Hashable { case cap(String), gap, text(String) }
 
@@ -393,10 +414,10 @@ struct Keycaps: View {
                         .frame(minWidth: 14)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
-                        .background(.quaternary.opacity(0.7), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        .background(accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .strokeBorder(.separator.opacity(0.8), lineWidth: 0.5)
+                                .strokeBorder(accent.opacity(0.3), lineWidth: 0.5)
                         )
                 case .gap:
                     Color.clear.frame(width: 4, height: 1)
@@ -405,7 +426,7 @@ struct Keycaps: View {
                 }
             }
         }
-        .foregroundStyle(.primary.opacity(0.85))
+        .foregroundStyle(accent)
         .environment(\.layoutDirection, .leftToRight) // keys read left to right, in Persian too
         .fixedSize()
     }
@@ -749,6 +770,17 @@ struct GlassIcon: View {
             .font(.system(size: size * 0.4, weight: .medium))
             .frame(width: size, height: size)
             .contentShape(Circle())
+    }
+}
+
+// A glass capsule behind a group of small buttons.
+extension View {
+    @ViewBuilder func glassCapsule() -> some View {
+        if #available(macOS 26, *) {
+            glassEffect(.regular.interactive(), in: .capsule)
+        } else {
+            background(.regularMaterial, in: Capsule()).overlay(Capsule().strokeBorder(.separator))
+        }
     }
 }
 
