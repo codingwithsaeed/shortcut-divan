@@ -322,7 +322,7 @@ struct RowLine: View {
                 .font(.system(size: 13.5))
                 .lineLimit(1)
             Spacer(minLength: 12)
-            RowActions(accent: accent, edit: edit, delete: delete)
+            RowActions(edit: edit, delete: delete)
                 .opacity(hovering ? 1 : 0)
             Keycaps(keys: shortcut.keys, accent: accent)
         }
@@ -330,8 +330,9 @@ struct RowLine: View {
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(hovering ? accent.opacity(0.12) : .clear)
-                .padding(.horizontal, 4)
+                .fill(hovering ? accent.opacity(0.10) : .clear)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
         )
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
@@ -343,17 +344,17 @@ struct RowLine: View {
     }
 }
 
-// Edit and delete, shown on hover: bare icons, the pencil in the section's color and the bin red.
+// Edit and delete, shown on hover: small rounded squares in the keycaps' shape, so the row
+// reads as one set of tiles; the bin is tinted red.
 struct RowActions: View {
-    let accent: Color
     let edit: () -> Void
     let delete: () -> Void
 
     var body: some View {
         HStack(spacing: 4) {
-            Button(action: edit) { face("pencil").foregroundStyle(accent) }
+            Button(action: edit) { tile("pencil", tint: .primary) }
                 .help("Edit")
-            Button(action: delete) { face("trash").foregroundStyle(.red) }
+            Button(action: delete) { tile("trash", tint: .red) }
                 .help("Delete")
         }
         .buttonStyle(.plain)
@@ -361,10 +362,13 @@ struct RowActions: View {
         .fixedSize()
     }
 
-    func face(_ symbol: String) -> some View {
+    func tile(_ symbol: String, tint: Color) -> some View {
         Image(systemName: symbol)
-            .font(.system(size: 13, weight: .semibold))
-            .frame(width: 24, height: 24)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(tint)
+            .frame(width: 26, height: 22)
+            .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous).strokeBorder(tint.opacity(0.25), lineWidth: 0.5))
             .contentShape(Rectangle())
     }
 }
@@ -409,14 +413,14 @@ struct Keycaps: View {
                 switch part {
                 case let .cap(text):
                     Text(verbatim: text)
-                        .font(.system(size: 12, weight: .medium, design: text.count > 1 && !text.contains(where: Self.symbols.contains) && text != "Space" ? .monospaced : .default))
+                        .font(.system(size: 12.5, weight: .semibold, design: text.count > 1 && !text.contains(where: Self.symbols.contains) && text != "Space" ? .monospaced : .default))
                         .frame(minWidth: 14)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
-                        .background(accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        .background(accent.opacity(0.22), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .strokeBorder(accent.opacity(0.3), lineWidth: 0.5)
+                                .strokeBorder(accent.opacity(0.45), lineWidth: 0.5)
                         )
                 case .gap:
                     Color.clear.frame(width: 4, height: 1)
@@ -425,7 +429,7 @@ struct Keycaps: View {
                 }
             }
         }
-        .foregroundStyle(accent)
+        .foregroundStyle(.primary)
         .environment(\.layoutDirection, .leftToRight) // keys read left to right, in Persian too
         .fixedSize()
     }
