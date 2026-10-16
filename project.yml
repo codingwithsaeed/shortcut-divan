@@ -1,0 +1,79 @@
+# Xcode project for Shortcut Divan. Generate it with `xcodegen generate`
+# (scripts/install.sh does); ShortcutDivan.xcodeproj itself is not committed.
+name: ShortcutDivan
+options:
+  bundleIdPrefix: io.github.codingwithsaeed
+  developmentLanguage: en
+  deploymentTarget:
+    macOS: "14.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # No Apple Developer account: ad-hoc signing ("Sign to Run Locally").
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: NO
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
+targets:
+  ShortcutDivan:
+    type: application
+    platform: macOS
+    sources:
+      - App
+      - Shared
+      - Resources
+    dependencies:
+      - target: DivanWidget
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleName: Shortcut Divan
+        CFBundleDisplayName: Shortcut Divan
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleLocalizations: [en, fa]
+        LSHasLocalizedDisplayName: true
+        LSApplicationCategoryType: public.app-category.productivity
+        NSHumanReadableCopyright: © Saeed Ahmadi. MIT License.
+        # shortcutdivan://section/<title>, opened by a click on the widget.
+        CFBundleURLTypes:
+          - CFBundleURLName: io.github.codingwithsaeed.shortcutdivan
+            CFBundleURLSchemes: [shortcutdivan]
+    # Not sandboxed: it writes the data folder the widget reads, and can follow a
+    # shortcuts file anywhere on disk.
+    settings:
+      base:
+        PRODUCT_NAME: Shortcut Divan
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.codingwithsaeed.shortcutdivan
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  DivanWidget:
+    type: app-extension
+    platform: macOS
+    sources:
+      - Widget
+      - Shared
+      - Resources
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Shortcut Divan
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleLocalizations: [en, fa]
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Widget/DivanWidget.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        # Read the shortcuts the app saves.
+        com.apple.security.temporary-exception.files.home-relative-path.read-only:
+          - /Library/Application Support/Shortcut Divan/
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.codingwithsaeed.shortcutdivan.widget
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

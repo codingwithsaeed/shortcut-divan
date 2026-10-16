@@ -1,0 +1,36 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "CFBundleDisplayName": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "دیوان میان‌بر"
+          }
+        }
+      }
+    },
+    "CFBundleName": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "دیوان میان‌بر"
+          }
+        }
+      }
+    },
+    "NSHumanReadableCopyright": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© سعید احمدی. مجوز MIT."
+          }
+        }
+      }
+    }
+  }
+}

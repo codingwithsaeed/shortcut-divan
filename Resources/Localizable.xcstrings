@@ -1,0 +1,546 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "Add Shortcut": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "افزودن میان‌بر"
+          }
+        }
+      }
+    },
+    "Add Shortcut…": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "افزودن میان‌بر…"
+          }
+        }
+      }
+    },
+    "Add a shortcut to this section": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "افزودن میان‌بر به این بخش"
+          }
+        }
+      }
+    },
+    "Blue": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "آبی"
+          }
+        }
+      }
+    },
+    "By": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "به اندازهٔ"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "انصراف"
+          }
+        }
+      }
+    },
+    "Color": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رنگ"
+          }
+        }
+      }
+    },
+    "Couldn't read %@: %@": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "خواندن %1$@ ممکن نشد: %2$@"
+          }
+        }
+      }
+    },
+    "Couldn't save: %@": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ذخیره ممکن نشد: %@"
+          }
+        }
+      }
+    },
+    "Delete": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذف"
+          }
+        }
+      }
+    },
+    "Delete Section…": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذف بخش…"
+          }
+        }
+      }
+    },
+    "Delete the “%@” section and its %lld shortcuts?": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بخش «%1$@» با %2$lld میان‌برش حذف شود؟"
+          }
+        }
+      }
+    },
+    "Delete “%@”?": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» حذف شود؟"
+          }
+        }
+      }
+    },
+    "Description": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "توضیح"
+          }
+        }
+      }
+    },
+    "Edit": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ویرایش"
+          }
+        }
+      }
+    },
+    "Edit Section…": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ویرایش بخش…"
+          }
+        }
+      }
+    },
+    "Edit…": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ویرایش…"
+          }
+        }
+      }
+    },
+    "Export…": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "خروجی گرفتن…"
+          }
+        }
+      }
+    },
+    "Follow a Shortcuts File": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "دنبال کردن یک فایل میان‌بر"
+          }
+        }
+      }
+    },
+    "Follow a Shortcuts File…": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "دنبال کردن یک فایل میان‌بر…"
+          }
+        }
+      }
+    },
+    "Following %@": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "در حال دنبال کردن %@"
+          }
+        }
+      }
+    },
+    "Gold": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "طلایی"
+          }
+        }
+      }
+    },
+    "Import Shortcuts": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وارد کردن میان‌برها"
+          }
+        }
+      }
+    },
+    "Import…": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وارد کردن…"
+          }
+        }
+      }
+    },
+    "Keys": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "کلیدها"
+          }
+        }
+      }
+    },
+    "New Section": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بخش تازه"
+          }
+        }
+      }
+    },
+    "Next Section": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بخش بعدی"
+          }
+        }
+      }
+    },
+    "No shortcuts yet": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هنوز میان‌بری نیست"
+          }
+        }
+      }
+    },
+    "No shortcuts yet.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هنوز میان‌بری نیست."
+          }
+        }
+      }
+    },
+    "Nothing matches “%@”.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "چیزی با «%@» پیدا نشد."
+          }
+        }
+      }
+    },
+    "Pick the section to show.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بخشی را که می‌خواهید نشان داده شود انتخاب کنید."
+          }
+        }
+      }
+    },
+    "Pink": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "صورتی"
+          }
+        }
+      }
+    },
+    "Purple": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بنفش"
+          }
+        }
+      }
+    },
+    "Replace": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جایگزین کن"
+          }
+        }
+      }
+    },
+    "Replace all your shortcuts with the defaults?": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "همهٔ میان‌برهایتان با میان‌برهای پیش‌فرض جایگزین شود؟"
+          }
+        }
+      }
+    },
+    "Replace your shortcuts with the %lld sections in “%@”?": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "میان‌برهایتان با %1$lld بخشِ «%2$@» جایگزین شود؟"
+          }
+        }
+      }
+    },
+    "Restore Default Shortcuts…": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بازگرداندن میان‌برهای پیش‌فرض…"
+          }
+        }
+      }
+    },
+    "Rose": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "گلبهی"
+          }
+        }
+      }
+    },
+    "Save": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ذخیره"
+          }
+        }
+      }
+    },
+    "Search shortcuts": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جست‌وجوی میان‌برها"
+          }
+        }
+      }
+    },
+    "Second section": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بخش دوم"
+          }
+        }
+      }
+    },
+    "Section": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بخش"
+          }
+        }
+      }
+    },
+    "Shortcut Divan": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "دیوان میان‌بر"
+          }
+        }
+      }
+    },
+    "Something went wrong": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مشکلی پیش آمد"
+          }
+        }
+      }
+    },
+    "Stop": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "توقف"
+          }
+        }
+      }
+    },
+    "Stop Following File": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "توقف دنبال کردن فایل"
+          }
+        }
+      }
+    },
+    "Stop following this file": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "دیگر این فایل را دنبال نکن"
+          }
+        }
+      }
+    },
+    "Teal": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فیروزه‌ای"
+          }
+        }
+      }
+    },
+    "Title": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عنوان"
+          }
+        }
+      }
+    },
+    "Turn Page": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ورق زدن"
+          }
+        }
+      }
+    },
+    "Widget": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ویجت"
+          }
+        }
+      }
+    },
+    "Your keyboard shortcuts on the desktop.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "میان‌برهای صفحه‌کلیدتان روی دسکتاپ."
+          }
+        }
+      }
+    },
+    "split horizontally": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تقسیم افقی"
+          }
+        }
+      }
+    },
+    "“%@” isn't a shortcuts file: %@": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%1$@» فایل میان‌بر نیست: %2$@"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "sections": [
+    {
+      "title": "macOS",
+      "accent": "iris",
+      "rows": [
+        { "keys": "⌘␣", "desc": "Spotlight search" },
+        { "keys": "⌘⇥", "desc": "switch apps" },
+        { "keys": "⌘`", "desc": "next window, same app" },
+        { "keys": "⌘W", "desc": "close window" },
+        { "keys": "⌘Q", "desc": "quit app" },
+        { "keys": "⌘H", "desc": "hide app" },
+        { "keys": "⌘M", "desc": "minimize window" },
+        { "keys": "⌘,", "desc": "app settings" },
+        { "keys": "⌃⌘F", "desc": "full screen" },
+        { "keys": "⌘Z / ⇧⌘Z", "desc": "undo / redo" },
+        { "keys": "⌃⌘␣", "desc": "emoji & symbols" },
+        { "keys": "⇧⌘3 / ⇧⌘4", "desc": "screenshot: screen / area" },
+        { "keys": "⇧⌘5", "desc": "screenshot & recording tools" },
+        { "keys": "⇧⌘.", "desc": "show hidden files" },
+        { "keys": "⌘⌫", "desc": "move to Trash" },
+        { "keys": "⌥⌘⎋", "desc": "force quit" },
+        { "keys": "⌃⌘Q", "desc": "lock screen" }
+      ]
+    }
+  ]
+}

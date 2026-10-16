@@ -1,0 +1,66 @@
+# Builds Shortcut Divan and attaches it to the GitHub release.
+# Publish a release (e.g. `gh release create v1.0.0 --generate-notes`) and this
+# workflow adds Shortcut-Divan-<version>.dmg and .zip to it. Run it by hand
+# (Actions › Release › Run workflow) to get the build as a workflow artifact instead.
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        run: |
+          if [ "${{ github.event_name }}" = release ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="0.0.0-dev.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Generate the Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      # Universal (Apple silicon + Intel), signed ad hoc: there is no Developer ID.
+      - name: Build
+        run: |
+          xcodebuild -project ShortcutDivan.xcodeproj -scheme ShortcutDivan -configuration Release \
+            -destination 'generic/platform=macOS' -derivedDataPath build \
+            ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
+            MARKETING_VERSION="${VERSION%%-*}" CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            build
+
+      - name: Package
+        run: |
+          mkdir -p dist/dmg
+          APP="build/Build/Products/Release/Shortcut Divan.app"
+          ditto -c -k --keepParent "$APP" "dist/Shortcut-Divan-$VERSION.zip"
+          cp -R "$APP" dist/dmg/
+          ln -s /Applications dist/dmg/Applications
+          hdiutil create -volname "Shortcut Divan" -srcfolder dist/dmg -ov -format UDZO \
+            "dist/Shortcut-Divan-$VERSION.dmg"
+          rm -rf dist/dmg
+
+      - name: Attach to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+
+      - name: Keep as a workflow artifact
+        if: github.event_name != 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Shortcut-Divan-${{ env.VERSION }}
+          path: dist/*
