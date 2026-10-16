@@ -696,11 +696,16 @@ struct TrafficLights: NSViewRepresentable {
     final class Placer: NSView {
         var centerY: CGFloat = 28
         private var observers: [NSObjectProtocol] = []
+        private var watched: Set<ObjectIdentifier> = []
+        private var appearance: NSKeyValueObservation?
+        private var placing = false
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             observers.forEach(NotificationCenter.default.removeObserver)
             observers = []
+            watched = []
+            appearance = nil
             guard let window else { return }
             let names: [Notification.Name] = [
                 NSWindow.didResizeNotification, NSWindow.didEndLiveResizeNotification,
@@ -708,34 +713,60 @@ struct TrafficLights: NSViewRepresentable {
                 NSWindow.didExitFullScreenNotification, NSWindow.didChangeScreenNotification,
             ]
             for name in names {
-                observers.append(NotificationCenter.default.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
-                    self?.place()
-                })
+                observe(name, of: window)
+            }
+            // Switching light and dark lays the title bar out again, back at its own height.
+            appearance = NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
+                DispatchQueue.main.async { self?.place() }
             }
             DispatchQueue.main.async { self.place() }
         }
 
+        private func observe(_ name: Notification.Name, of object: AnyObject) {
+            observers.append(NotificationCenter.default.addObserver(forName: name, object: object, queue: .main) { [weak self] _ in
+                self?.place()
+            })
+        }
+
+        // AppKit lays the title bar out again on its own (on theme changes, focus, hover over
+        // the buttons); any frame change of the bar or a button puts them back.
+        private func watch(_ view: NSView) {
+            guard watched.insert(ObjectIdentifier(view)).inserted else { return }
+            view.postsFrameChangedNotifications = true
+            observe(NSView.frameDidChangeNotification, of: view)
+        }
+
+        override func layout() {
+            super.layout()
+            place()
+        }
+
         func place() {
-            guard let window, !window.styleMask.contains(.fullScreen),
+            guard !placing, let window, !window.styleMask.contains(.fullScreen),
                   let close = window.standardWindowButton(.closeButton),
                   let minimize = window.standardWindowButton(.miniaturizeButton),
                   let zoom = window.standardWindowButton(.zoomButton),
                   let bar = close.superview, let container = bar.superview else { return }
+            placing = true
+            defer { placing = false }
+            for view in [container, bar, close, minimize, zoom] { watch(view) }
             // The title bar's container grows to the header's height, so the buttons can sit
             // in its middle; it is transparent, and clicks beside the buttons still reach
             // the header below it.
             let height = centerY * 2
-            container.frame = NSRect(x: container.frame.minX, y: window.frame.height - height,
-                                     width: container.frame.width, height: height)
-            bar.frame = container.bounds
+            let frame = NSRect(x: container.frame.minX, y: window.frame.height - height,
+                               width: container.frame.width, height: height)
+            if container.frame != frame { container.frame = frame }
+            if bar.frame != container.bounds { bar.frame = container.bounds }
             let size = close.frame.size
-            let step = max(minimize.frame.minX - close.frame.minX, size.width + 6).magnitude
-            let rightToLeft = close.frame.minX > zoom.frame.minX
+            let step = size.width + 6 // the system's spacing between the three
+            let rightToLeft = window.windowTitlebarLayoutDirection == .rightToLeft
             let first = centerY - size.width / 2 // same distance from the side as from the top
             for (index, button) in [close, minimize, zoom].enumerated() {
                 let offset = first + CGFloat(index) * step
                 let x = rightToLeft ? bar.bounds.width - offset - size.width : offset
-                button.setFrameOrigin(NSPoint(x: x, y: (height - size.height) / 2))
+                let origin = NSPoint(x: x, y: (height - size.height) / 2)
+                if button.frame.origin != origin { button.setFrameOrigin(origin) }
             }
         }
 
