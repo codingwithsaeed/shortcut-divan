@@ -96,6 +96,7 @@ struct DivanWindow: View {
     static let barHeight = headerHeight + SearchField.height + 10 // the pinned part of the content
     static let cardsTop = barHeight + 8
     static let side: CGFloat = 28 // the content's side margin, shared by the header, search and cards
+    static let listInset: CGFloat = 10 // the sidebar rows' margin from its sides
 
     var body: some View {
         // One backdrop under the whole window, so the sidebar and the cards sit on the same
@@ -103,92 +104,14 @@ struct DivanWindow: View {
         ZStack(alignment: .topLeading) {
             HStack(spacing: 0) {
                 if sidebarShown {
-                    ScrollView {
-                        SidebarList(
-                            sections: store.sections, total: total, selected: $selected,
-                            menu: { sectionMenu($0) }
-                        ) { from, to in
-                            withAnimation(.snappy) {
-                                store.sections.move(fromOffsets: [from], toOffset: to > from ? to + 1 : to)
-                            }
-                            store.commit()
-                        }
-                        .padding(.horizontal, SidebarList.inset)
-                        .padding(.top, Self.headerHeight) // level with the search field
-                        .padding(.bottom, 12)
-                    }
-                    .scrollIndicators(.never)
-                    .frame(width: sideWidth)
-                    .transition(.move(edge: .leading).combined(with: .opacity))
+                    sidebarColumn
                     Color.clear.frame(width: 1)
                 }
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 22) {
-                            ForEach(shown, id: \.index) { item in
-                                SectionTable(
-                                    section: store.sections[item.index], index: item.index, rows: item.rows,
-                                    edit: { editing = $0 }, delete: { deleting = $0 },
-                                    menu: { sectionMenu(item.index) }
-                                )
-                                .id(store.sections[item.index].title)
-                            }
-                            if shown.isEmpty && !query.isEmpty {
-                                Text("Nothing matches “\(query)”.").foregroundStyle(.secondary)
-                            }
-                        }
-                        .padding(.horizontal, Self.side)
-                        .padding(.bottom, Self.side)
-                        .padding(.top, Self.cardsTop - Self.barHeight)
-                        .frame(maxWidth: .infinity)
-                        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { contentWidth = $0 }
-                        .environment(\.layoutDirection, .app)
-                    }
-                    .safeAreaPadding(.top, Self.barHeight)
-                    .noTopEdgeEffect()
-                    .onChange(of: selected) { _, _ in
-                        if let first = shown.first { proxy.scrollTo(store.sections[first.index].title, anchor: .top) }
-                    }
-                }
-                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { columnWidth = $0 }
+                contentColumn
             }
-            // What scrolls fades out under the pinned rows into a second copy of the backdrop,
-            // so nothing shows through their glass and no band marks where they start: under
-            // the header in the sidebar, under the header and the search field beside it.
-            Backdrop()
-                .mask(alignment: .topLeading) {
-                    HStack(alignment: .top, spacing: 0) {
-                        if sidebarShown {
-                            Self.fade(Self.headerHeight - 4, 12).frame(width: sideWidth + 1)
-                        }
-                        Self.fade(Self.barHeight - 6, 22)
-                    }
-                }
-                .allowsHitTesting(false)
-            if sidebarShown {
-                // The sidebar's edge, as in Telegram: one straight line, with a soft shadow on
-                // the cards' side. Drag it to resize the sidebar.
-                HStack(spacing: 0) {
-                    Rectangle().fill(Color.primary.opacity(0.14)).frame(width: 1)
-                    LinearGradient(colors: [.black.opacity(0.10), .clear], startPoint: .leading, endPoint: .trailing)
-                        .frame(width: 10)
-                }
-                .padding(.leading, sideWidth)
-                .allowsHitTesting(false)
-                SidebarResizer(width: $sidebarWidth)
-                    .padding(.top, Self.headerHeight)
-                    .padding(.leading, sideWidth - 4)
-                sidebarHeader
-                    .frame(width: sideWidth)
-                    .transition(.move(edge: .leading).combined(with: .opacity))
-            }
-            VStack(spacing: 0) {
-                contentHeader
-                SearchField(text: $query, focus: $searching)
-                    .padding(.leading, Self.side)
-                    .padding(.trailing, trailingSide)
-            }
-            .padding(.leading, sidebarShown ? sideWidth + 1 : 0)
+            fadeLayer
+            if sidebarShown { sidebarEdge }
+            pinnedRows
         }
         .background(TrafficLights(centerY: Self.headerHeight / 2))
         .environment(\.layoutDirection, .app)
@@ -252,6 +175,104 @@ struct DivanWindow: View {
         .frame(minWidth: 680, minHeight: 480)
     }
 
+    var sidebarColumn: some View {
+        ScrollView {
+            SidebarList(
+                sections: store.sections, total: total, selected: $selected,
+                menu: { sectionMenu($0) }
+            ) { from, to in
+                withAnimation(.snappy) {
+                    store.sections.move(fromOffsets: [from], toOffset: to > from ? to + 1 : to)
+                }
+                store.commit()
+            }
+            .padding(.horizontal, Self.listInset)
+            .padding(.top, Self.headerHeight) // level with the search field
+            .padding(.bottom, 12)
+        }
+        .scrollIndicators(.never)
+        .frame(width: sideWidth)
+        .transition(.move(edge: .leading).combined(with: .opacity))
+    }
+
+    var contentColumn: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 22) {
+                    ForEach(shown, id: \.index) { item in
+                        SectionTable(
+                            section: store.sections[item.index], index: item.index, rows: item.rows,
+                            edit: { editing = $0 }, delete: { deleting = $0 },
+                            menu: { sectionMenu(item.index) }
+                        )
+                        .id(store.sections[item.index].title)
+                    }
+                    if shown.isEmpty && !query.isEmpty {
+                        Text("Nothing matches “\(query)”.").foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.horizontal, Self.side)
+                .padding(.bottom, Self.side)
+                .padding(.top, Self.cardsTop - Self.barHeight)
+                .frame(maxWidth: .infinity)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { contentWidth = $0 }
+                .environment(\.layoutDirection, .app)
+            }
+            .safeAreaPadding(.top, Self.barHeight)
+            .noTopEdgeEffect()
+            .onChange(of: selected) { _, _ in
+                if let first = shown.first { proxy.scrollTo(store.sections[first.index].title, anchor: .top) }
+            }
+        }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { columnWidth = $0 }
+    }
+
+    var fadeLayer: some View {
+        // What scrolls fades out under the pinned rows into a second copy of the backdrop,
+        // so nothing shows through their glass and no band marks where they start: under
+        // the header in the sidebar, under the header and the search field beside it.
+        Backdrop()
+            .mask(alignment: .topLeading) {
+                HStack(alignment: .top, spacing: 0) {
+                    if sidebarShown {
+                        Self.fade(Self.headerHeight - 4, 12).frame(width: sideWidth + 1)
+                    }
+                    Self.fade(Self.barHeight - 6, 22)
+                }
+            }
+            .allowsHitTesting(false)
+    }
+
+    @ViewBuilder var sidebarEdge: some View {
+        if sidebarShown {
+            // The sidebar's edge, as in Telegram: one straight line, with a soft shadow on
+            // the cards' side. Drag it to resize the sidebar.
+            HStack(spacing: 0) {
+                Rectangle().fill(Color.primary.opacity(0.14)).frame(width: 1)
+                LinearGradient(colors: [.black.opacity(0.10), .clear], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: 10)
+            }
+            .padding(.leading, sideWidth)
+            .allowsHitTesting(false)
+            SidebarResizer(width: $sidebarWidth)
+                .padding(.top, Self.headerHeight)
+                .padding(.leading, sideWidth - 4)
+            sidebarHeader
+                .frame(width: sideWidth)
+                .transition(.move(edge: .leading).combined(with: .opacity))
+        }
+    }
+
+    var pinnedRows: some View {
+        VStack(spacing: 0) {
+            contentHeader
+            SearchField(text: $query, focus: $searching)
+                .padding(.leading, Self.side)
+                .padding(.trailing, trailingSide)
+        }
+        .padding(.leading, sidebarShown ? sideWidth + 1 : 0)
+    }
+
     // A visible scroll bar narrows the cards; the header and the search field narrow with
     // them, so their ends line up with the cards' (left ones, in Persian).
     var trailingSide: CGFloat { Self.side + max(0, columnWidth - contentWidth) }
@@ -295,7 +316,7 @@ struct DivanWindow: View {
             }
         }
         .padding(.leading, TrafficLights.width)
-        .padding(.trailing, SidebarList.inset)
+        .padding(.trailing, Self.listInset)
         .frame(height: Self.headerHeight)
         .movesWindow()
     }
@@ -618,8 +639,6 @@ enum Theme: String, CaseIterable {
 // The sidebar's rows, flat on the backdrop as in Telegram: All Shortcuts, then a row per
 // section. Drag a section to reorder.
 struct SidebarList<Menu: View>: View {
-    static var inset: CGFloat { 10 } // from the sidebar's sides
-
     let sections: [Section]
     let total: Int
     @Binding var selected: String?
