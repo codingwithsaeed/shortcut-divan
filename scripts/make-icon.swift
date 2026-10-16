@@ -1,6 +1,6 @@
 // Builds Resources/AppIcon.icon, an Icon Composer icon: macOS renders its layers as Liquid
 // Glass (light, dark, tinted and clear looks) and Xcode makes the older-macOS icon from it.
-//   one glass keycap with ⌥ and ⌘ on it
+//   one glass keycap with ⌥ and ⌘ on it, in the app's Rosé Pine colors, light and dark
 // Run from the repo root after changing it: swift scripts/make-icon.swift
 import AppKit
 
@@ -53,21 +53,31 @@ try layer("command.png") { cg in
     glyph.draw(at: NSPoint(x: key.midX - size.width / 2 + 12, y: key.midY - size.height / 2 - 6))
 }
 
+// Rosé Pine colors, as in the app: Dawn in light mode, the night palette in dark mode.
+func p3(_ hex: UInt32, _ alpha: Double = 1) -> String {
+    let c = [hex >> 16 & 0xff, hex >> 8 & 0xff, hex & 0xff].map { String(format: "%.5f", Double($0) / 255) }
+    return "display-p3:\(c.joined(separator: ",")),\(String(format: "%.5f", alpha))"
+}
+func gradient(_ top: UInt32, _ bottom: UInt32) -> [String: Any] {
+    ["linear-gradient": [p3(top), p3(bottom)], "orientation": ["start": ["x": 0.5, "y": 0], "stop": ["x": 0.5, "y": 1]]]
+}
+func appearances(light: Any, dark: Any) -> [[String: Any]] {
+    [["value": light], ["appearance": "dark", "value": dark]]
+}
+
 let icon: [String: Any] = [
-    "fill": [
-        "linear-gradient": ["display-p3:0.52941,0.38431,0.85098,1.00000", "display-p3:0.92157,0.38039,0.56471,1.00000"],
-        "orientation": ["start": ["x": 0.2, "y": 0], "stop": ["x": 0.8, "y": 1]],
-    ],
+    "fill-specializations": appearances(light: gradient(0xe4d5f2, 0xc4a7e7), dark: gradient(0x393552, 0x191724)),
     "groups": [
         [
             "name": "Key",
             "layers": [
-                ["name": "Command", "image-name": "command.png", "glass": false,
-                 "fill": ["solid": "display-p3:0.33725,0.20392,0.56078,1.00000"]],
+                ["name": "Glyphs", "image-name": "command.png", "glass": false,
+                 "fill-specializations": appearances(light: ["solid": p3(0x57408a)], dark: ["solid": p3(0xc4a7e7)])],
                 ["name": "Key", "image-name": "key.png", "glass": true,
-                 "fill": ["automatic-gradient": "display-p3:1.00000,1.00000,1.00000,0.90000"]],
+                 "fill-specializations": appearances(light: ["automatic-gradient": p3(0xfffaf3, 0.95)],
+                                                     dark: ["automatic-gradient": p3(0x403d52, 0.9)])],
             ],
-            "shadow": ["kind": "layer-color", "opacity": 0.5],
+            "shadow": ["kind": "neutral", "opacity": 0.45],
             "translucency": ["enabled": true, "value": 0.25],
             "specular": true,
         ],

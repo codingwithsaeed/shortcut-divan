@@ -1,35 +1,78 @@
 {
-  "fill" : {
-    "linear-gradient" : [
-      "display-p3:0.52941,0.38431,0.85098,1.00000",
-      "display-p3:0.92157,0.38039,0.56471,1.00000"
-    ],
-    "orientation" : {
-      "start" : {
-        "x" : 0.20000000000000001,
-        "y" : 0
-      },
-      "stop" : {
-        "x" : 0.80000000000000004,
-        "y" : 1
+  "fill-specializations" : [
+    {
+      "value" : {
+        "linear-gradient" : [
+          "display-p3:0.89412,0.83529,0.94902,1.00000",
+          "display-p3:0.76863,0.65490,0.90588,1.00000"
+        ],
+        "orientation" : {
+          "start" : {
+            "x" : 0.5,
+            "y" : 0
+          },
+          "stop" : {
+            "x" : 0.5,
+            "y" : 1
+          }
+        }
+      }
+    },
+    {
+      "appearance" : "dark",
+      "value" : {
+        "linear-gradient" : [
+          "display-p3:0.22353,0.20784,0.32157,1.00000",
+          "display-p3:0.09804,0.09020,0.14118,1.00000"
+        ],
+        "orientation" : {
+          "start" : {
+            "x" : 0.5,
+            "y" : 0
+          },
+          "stop" : {
+            "x" : 0.5,
+            "y" : 1
+          }
+        }
       }
     }
-  },
+  ],
   "groups" : [
     {
       "layers" : [
         {
-          "fill" : {
-            "solid" : "display-p3:0.33725,0.20392,0.56078,1.00000"
-          },
+          "fill-specializations" : [
+            {
+              "value" : {
+                "solid" : "display-p3:0.34118,0.25098,0.54118,1.00000"
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "display-p3:0.76863,0.65490,0.90588,1.00000"
+              }
+            }
+          ],
           "glass" : false,
           "image-name" : "command.png",
-          "name" : "Command"
+          "name" : "Glyphs"
         },
         {
-          "fill" : {
-            "automatic-gradient" : "display-p3:1.00000,1.00000,1.00000,0.90000"
-          },
+          "fill-specializations" : [
+            {
+              "value" : {
+                "automatic-gradient" : "display-p3:1.00000,0.98039,0.95294,0.95000"
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "automatic-gradient" : "display-p3:0.25098,0.23922,0.32157,0.90000"
+              }
+            }
+          ],
           "glass" : true,
           "image-name" : "key.png",
           "name" : "Key"
@@ -37,8 +80,8 @@
       ],
       "name" : "Key",
       "shadow" : {
-        "kind" : "layer-color",
-        "opacity" : 0.5
+        "kind" : "neutral",
+        "opacity" : 0.45000000000000001
       },
       "specular" : true,
       "translucency" : {

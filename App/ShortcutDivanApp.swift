@@ -321,13 +321,15 @@ struct RowLine: View {
                 .font(.system(size: 13.5))
                 .lineLimit(1)
             Spacer(minLength: 12)
-            HStack(spacing: 2) {
-                Button("Edit", systemImage: "pencil", action: edit)
-                Button("Delete", systemImage: "trash", action: delete)
+            GlassGroup {
+                Button(action: edit) { GlassIcon(symbol: "pencil", size: 26) }
+                    .glassDisc()
+                    .help("Edit")
+                Button(action: delete) { GlassIcon(symbol: "trash", size: 26) }
+                    .glassDisc()
+                    .help("Delete")
             }
-            .labelStyle(.iconOnly)
-            .buttonStyle(.borderless)
-            .foregroundStyle(.secondary)
+            .focusable(false)
             .opacity(hovering ? 1 : 0)
             Keycaps(keys: shortcut.keys)
         }
