@@ -417,7 +417,6 @@ struct RowEditor: View {
     @State var section: Int
     @State var row: Shortcut
     let save: (Shortcut, Int) -> Void
-    @Environment(\.dismiss) private var dismiss
 
     init(sections: [String], section: Int, row: Shortcut, save: @escaping (Shortcut, Int) -> Void) {
         self.sections = sections
@@ -435,7 +434,7 @@ struct RowEditor: View {
             HStack(spacing: 4) {
                 ForEach(Self.symbols, id: \.self) { symbol in
                     Button { row.keys += symbol } label: { Text(verbatim: symbol) }
-                        .font(.system(size: 14))
+                        .buttonStyle(KeycapButtonStyle())
                 }
             }
             .environment(\.layoutDirection, .leftToRight)
@@ -445,24 +444,21 @@ struct RowEditor: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 520)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    save(Shortcut(keys: row.keys.trimmed, desc: row.desc.trimmed, only: row.only), section)
-                    dismiss()
-                }
-                .disabled(row.keys.trimmed.isEmpty || row.desc.trimmed.isEmpty)
+        .scrollDisabled(true)
+        .safeAreaInset(edge: .bottom) {
+            SheetButtons(disabled: row.keys.trimmed.isEmpty || row.desc.trimmed.isEmpty) {
+                save(Shortcut(keys: row.keys.trimmed, desc: row.desc.trimmed, only: row.only), section)
             }
         }
+        .appLook()
+        .frame(width: 520)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
 struct SectionEditor: View {
     @State var section: Section
     let save: (Section) -> Void
-    @Environment(\.dismiss) private var dismiss
 
     static let colorNames: [String: LocalizedStringKey] = [
         "love": "Pink", "gold": "Gold", "rose": "Rose", "pine": "Blue", "foam": "Teal", "iris": "Purple",
@@ -483,18 +479,16 @@ struct SectionEditor: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 400)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    section.title = section.title.trimmed
-                    save(section)
-                    dismiss()
-                }
-                .disabled(section.title.trimmed.isEmpty)
+        .scrollDisabled(true)
+        .safeAreaInset(edge: .bottom) {
+            SheetButtons(disabled: section.title.trimmed.isEmpty) {
+                section.title = section.title.trimmed
+                save(section)
             }
         }
+        .appLook()
+        .frame(width: 400)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -770,28 +764,34 @@ struct SettingsView: View {
                         Text("Kept by the app")
                     }
                 }
-                HStack {
-                    Button("Follow a Shortcuts File…") { store.link() }
-                    if store.linkedFile != nil { Button("Stop Following File") { store.unlink() } }
+                HStack(spacing: 8) {
+                    Button("Follow a Shortcuts File…", systemImage: "link") { store.link() }
+                        .buttonStyle(TintButtonStyle(accent: "iris"))
+                    if store.linkedFile != nil {
+                        Button("Stop Following File", systemImage: "xmark") { store.unlink() }
+                            .buttonStyle(TintButtonStyle(accent: "gold"))
+                    }
                 }
             } footer: {
                 Text("A followed file is read, watched for changes, and saved back to when you edit here.")
                     .foregroundStyle(.secondary)
             }
             SwiftUI.Section {
-                HStack {
-                    Button("Import…") { store.importFile() }
-                    Button("Export…") { store.exportFile() }
+                HStack(spacing: 8) {
+                    Button("Import…", systemImage: "square.and.arrow.down") { store.importFile() }
+                        .buttonStyle(TintButtonStyle(accent: "foam"))
+                    Button("Export…", systemImage: "square.and.arrow.up") { store.exportFile() }
+                        .buttonStyle(TintButtonStyle(accent: "pine"))
                     Spacer()
-                    Button("Restore Default Shortcuts…", role: .destructive) { store.restoreDefaults() }
+                    Button("Restore Default Shortcuts…", systemImage: "arrow.counterclockwise", role: .destructive) {
+                        store.restoreDefaults()
+                    }
+                    .buttonStyle(TintButtonStyle(accent: "love"))
                 }
             }
         }
         .formStyle(.grouped)
-        .buttonStyle(GlassButtonStyle())
-        // The main window's look: its colored backdrop behind glass groups.
-        .scrollContentBackground(.hidden)
-        .background(Backdrop())
+        .appLook()
         .frame(width: 520)
         .fixedSize(horizontal: false, vertical: true)
         .environment(\.layoutDirection, .app)
@@ -876,16 +876,88 @@ extension View {
     }
 }
 
-// Text buttons in glass capsules on macOS 26, like the round ones; bordered before.
-struct GlassButtonStyle: PrimitiveButtonStyle {
+// Text buttons tinted with a Rosé Pine color, in the keycaps' and row tiles' style: a soft
+// fill, a thin border in the same color, a stronger fill on hover and press. `prominent`
+// fills it for the main action of a sheet.
+struct TintButtonStyle: ButtonStyle {
+    var accent = "iris"
+    var prominent = false
+
     func makeBody(configuration: Configuration) -> some View {
-        if #available(macOS 26, *) {
-            Button(role: configuration.role, action: configuration.trigger) { configuration.label }
-                .buttonStyle(.glass)
-        } else {
-            Button(role: configuration.role, action: configuration.trigger) { configuration.label }
-                .buttonStyle(.bordered)
+        Tinted(configuration: configuration, color: Color.rosePine(accent), prominent: prominent)
+    }
+
+    struct Tinted: View {
+        let configuration: Configuration
+        let color: Color
+        let prominent: Bool
+        @Environment(\.isEnabled) private var enabled
+        @State private var hovering = false
+
+        var body: some View {
+            let fill = prominent ? 0.85 : configuration.isPressed ? 0.32 : hovering ? 0.22 : 0.14
+            configuration.label
+                .font(.system(size: 13, weight: .medium))
+                .labelStyle(.titleAndIcon)
+                .foregroundStyle(prominent ? Color.white : color)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(color.opacity(configuration.isPressed && prominent ? 0.7 : fill),
+                            in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(color.opacity(prominent ? 0 : 0.35), lineWidth: 0.5))
+                .opacity(enabled ? 1 : 0.45)
+                .contentShape(Rectangle())
+                .onHover { hovering = $0 }
+                .animation(.easeOut(duration: 0.12), value: hovering)
         }
+    }
+}
+
+// A key symbol to add in the shortcut editor, drawn as a keycap.
+struct KeycapButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: .semibold))
+            .frame(minWidth: 26, minHeight: 24)
+            .background(Color.primary.opacity(configuration.isPressed ? 0.22 : 0.10),
+                        in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.2), lineWidth: 0.5))
+            .contentShape(Rectangle())
+    }
+}
+
+extension View {
+    // Settings and the edit sheets in the main window's look: its colored backdrop behind
+    // the form's groups.
+    func appLook() -> some View {
+        scrollContentBackground(.hidden).background(Backdrop())
+    }
+}
+
+// Cancel and the main action at the bottom of an edit sheet, in the app's button style.
+struct SheetButtons: View {
+    let disabled: Bool
+    let save: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Spacer()
+            Button("Cancel") { dismiss() }
+                .buttonStyle(TintButtonStyle(accent: "text"))
+                .keyboardShortcut(.cancelAction)
+            Button("Save") {
+                save()
+                dismiss()
+            }
+            .buttonStyle(TintButtonStyle(accent: "iris", prominent: true))
+            .keyboardShortcut(.defaultAction)
+            .disabled(disabled)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 16)
     }
 }
 
