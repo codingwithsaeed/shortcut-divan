@@ -5,6 +5,15 @@ import SwiftUI
 import WidgetKit
 
 @main
+enum Main {
+    static func main() {
+        // In Persian the whole window, sidebar and title bar included, goes right to left,
+        // even when the rest of the system is in English. AppKit reads this at launch.
+        UserDefaults.standard.set(LayoutDirection.app == .rightToLeft, forKey: "AppleTextDirection")
+        ShortcutDivanApp.main()
+    }
+}
+
 struct ShortcutDivanApp: App {
     @NSApplicationDelegateAdaptor var delegate: AppDelegate
     private let store = Store.shared
@@ -101,7 +110,9 @@ struct DivanWindow: View {
         }
         .searchable(text: $query, placement: .toolbar, prompt: Text("Search shortcuts"))
         .toolbar {
-            Button("New Section", systemImage: "plus") { editing = .section(nil) }
+            ToolbarItem { ThemePicker() }
+            ToolbarItem { LanguageMenu() }
+            ToolbarItem { Button("New Section", systemImage: "plus") { editing = .section(nil) } }
         }
         .sheet(item: $editing) { editing in
             Group {
@@ -150,6 +161,7 @@ struct DivanWindow: View {
             selected = url.pathComponents.dropFirst().first
         }
         .onExitCommand { NSApp.keyWindow?.close() }
+        .onAppear { Theme.current.apply() }
         .frame(minWidth: 680, minHeight: 480)
     }
 
@@ -227,15 +239,19 @@ struct SectionTable<Menu: View>: View {
                     .background(accent.opacity(0.15), in: Capsule())
                     .foregroundStyle(accent)
                 Spacer(minLength: 0)
-                Button("Add Shortcut", systemImage: "plus") { edit(.row(section: index, row: nil)) }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.borderless)
-                    .focusable(false)
-                    .help("Add a shortcut to this section")
-                SwiftUI.Menu { menu() } label: { Image(systemName: "ellipsis") }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .fixedSize()
+                GlassGroup {
+                    Button("Add Shortcut", systemImage: "plus") { edit(.row(section: index, row: nil)) }
+                        .labelStyle(.iconOnly)
+                        .glassCircle()
+                        .focusable(false)
+                        .help("Add a shortcut to this section")
+                    SwiftUI.Menu { menu() } label: { Label("More", systemImage: "ellipsis") }
+                        .labelStyle(.iconOnly)
+                        .menuIndicator(.hidden)
+                        .glassCircle()
+                        .focusable(false)
+                        .fixedSize()
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
@@ -401,6 +417,75 @@ struct SectionEditor: View {
     }
 }
 
+// Light, dark or following the system; applied to the whole app.
+enum Theme: String, CaseIterable {
+    case system, light, dark
+
+    static var current: Theme { Theme(rawValue: UserDefaults.standard.string(forKey: "theme") ?? "") ?? .system }
+
+    func apply() {
+        UserDefaults.standard.set(rawValue, forKey: "theme")
+        NSApp?.appearance = switch self {
+        case .system: nil
+        case .light: NSAppearance(named: .aqua)
+        case .dark: NSAppearance(named: .darkAqua)
+        }
+    }
+}
+
+struct ThemePicker: View {
+    @State private var theme = Theme.current
+
+    var body: some View {
+        Picker("Theme", selection: $theme) {
+            Label("Automatic", systemImage: "circle.lefthalf.filled").tag(Theme.system)
+            Label("Light", systemImage: "sun.max.fill").tag(Theme.light)
+            Label("Dark", systemImage: "moon.fill").tag(Theme.dark)
+        }
+        .pickerStyle(.segmented)
+        .labelStyle(.iconOnly)
+        .help("Theme")
+        .onChange(of: theme) { _, theme in theme.apply() }
+    }
+}
+
+// Switching language restarts the app, so every text and the layout direction change together.
+struct LanguageMenu: View {
+    var body: some View {
+        Menu {
+            Picker("Language", selection: Binding { AppLanguage.chosen ?? "" } set: { switchTo($0) }) {
+                Text("System").tag("")
+                Text(verbatim: "English").tag("en")
+                Text(verbatim: "فارسی").tag("fa")
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Label("Language", systemImage: "globe")
+        }
+        .help("Language")
+    }
+
+    func switchTo(_ language: String) {
+        guard language != (AppLanguage.chosen ?? "") else { return }
+        let defaults = UserDefaults.standard
+        if language.isEmpty {
+            defaults.removeObject(forKey: "AppleLanguages")
+            try? FileManager.default.removeItem(at: AppLanguage.file)
+        } else {
+            defaults.set([language], forKey: "AppleLanguages")
+            try? FileManager.default.createDirectory(at: AppLanguage.file.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? Data(language.utf8).write(to: AppLanguage.file)
+        }
+        defaults.synchronize()
+        WidgetCenter.shared.reloadAllTimelines()
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, _ in
+            DispatchQueue.main.async { NSApp.terminate(nil) }
+        }
+    }
+}
+
 // Liquid Glass on macOS 26; a frosted material before that.
 extension View {
     @ViewBuilder func glassCard(cornerRadius: CGFloat) -> some View {
@@ -409,6 +494,29 @@ extension View {
         } else {
             background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
                 .overlay(RoundedRectangle(cornerRadius: cornerRadius).strokeBorder(.separator))
+        }
+    }
+}
+
+// Round glass buttons that merge when close (macOS 26); plain borderless ones before.
+struct GlassGroup<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        if #available(macOS 26, *) {
+            GlassEffectContainer(spacing: 8) { HStack(spacing: 8, content: content) }
+        } else {
+            HStack(spacing: 8, content: content)
+        }
+    }
+}
+
+extension View {
+    @ViewBuilder func glassCircle() -> some View {
+        if #available(macOS 26, *) {
+            buttonStyle(.glass).buttonBorderShape(.circle).controlSize(.large)
+        } else {
+            buttonStyle(.borderless)
         }
     }
 }

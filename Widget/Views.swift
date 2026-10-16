@@ -143,6 +143,7 @@ struct DivanView: View {
     var body: some View {
         SectionsContent(entry: entry, family: family)
             .environment(\.layoutDirection, .app)
+            .environment(\.locale, Locale(identifier: AppLanguage.current))
             .containerBackground(.background, for: .widget)
             .widgetURL(link)
     }

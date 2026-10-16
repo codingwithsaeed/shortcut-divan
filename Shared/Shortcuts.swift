@@ -83,12 +83,23 @@ enum Shortcuts {
     private struct File: Codable { let sections: [Section] }
 }
 
+// The language picked in the app ("en", "fa"), saved next to the data so the widget
+// follows it too; nil means the system language.
+enum AppLanguage {
+    static var file: URL { Shortcuts.dataFile.deletingLastPathComponent().appendingPathComponent("language") }
+
+    static var chosen: String? {
+        (try? String(contentsOf: file, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static var current: String { chosen ?? Bundle.main.preferredLocalizations.first ?? "en" }
+}
+
 extension LayoutDirection {
-    // Right to left when the app runs in Persian (AppKit doesn't flip SwiftUI on its own
-    // unless the whole system is in a right-to-left language).
+    // Right to left in Persian (AppKit doesn't flip SwiftUI on its own unless the whole
+    // system is in a right-to-left language).
     static var app: LayoutDirection {
-        let language = Bundle.main.preferredLocalizations.first ?? "en"
-        return Locale.Language(identifier: language).characterDirection == .rightToLeft ? .rightToLeft : .leftToRight
+        Locale.Language(identifier: AppLanguage.current).characterDirection == .rightToLeft ? .rightToLeft : .leftToRight
     }
 }
 
