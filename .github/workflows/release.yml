@@ -1,6 +1,6 @@
 # Builds Shortcut Divan and attaches it to the GitHub release.
 # Publish a release (e.g. `gh release create v1.0.0 --generate-notes`) and this
-# workflow adds Shortcut-Divan-<version>.dmg and .zip to it. Run it by hand
+# workflow adds Shortcut-Divan-<version>.dmg to it. Run it by hand
 # (Actions › Release › Run workflow) to get the build as a workflow artifact instead.
 name: Release
 
@@ -45,7 +45,6 @@ jobs:
         run: |
           mkdir -p dist/dmg
           APP="build/Build/Products/Release/Shortcut Divan.app"
-          ditto -c -k --keepParent "$APP" "dist/Shortcut-Divan-$VERSION.zip"
           cp -R "$APP" dist/dmg/
           ln -s /Applications dist/dmg/Applications
           hdiutil create -volname "Shortcut Divan" -srcfolder dist/dmg -ov -format UDZO \

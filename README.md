@@ -72,8 +72,8 @@ It builds the app and installs it into `~/Applications`.
 
 ## Releasing
 
-Publishing a GitHub release builds the app (universal, signed ad hoc) and attaches the `.dmg`
-and `.zip` to it:
+Publishing a GitHub release builds the app (universal, signed ad hoc) and attaches the `.dmg` to
+it:
 
 ```sh
 gh release create v1.0.0 --generate-notes
