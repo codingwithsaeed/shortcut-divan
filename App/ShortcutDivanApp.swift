@@ -76,7 +76,7 @@ struct DivanWindow: View {
         } detail: {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 26) {
+                    LazyVStack(alignment: .leading, spacing: 20) {
                         ForEach(shown, id: \.index) { item in
                             SectionTable(
                                 section: store.sections[item.index], index: item.index, rows: item.rows,
@@ -92,6 +92,7 @@ struct DivanWindow: View {
                     .padding(24)
                     .environment(\.layoutDirection, .app)
                 }
+                .background(Backdrop())
                 .onChange(of: selected) { _, title in
                     guard let title else { return }
                     withAnimation { proxy.scrollTo(title, anchor: .top) }
@@ -203,6 +204,7 @@ struct DivanWindow: View {
     }
 }
 
+// A section as a card: title bar, column headers, then one row per shortcut with rules between.
 struct SectionTable<Menu: View>: View {
     let section: Section
     let index: Int
@@ -213,39 +215,68 @@ struct SectionTable<Menu: View>: View {
 
     var body: some View {
         let accent = Color.rosePine(section.accent)
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                Text(verbatim: section.title.uppercased())
-                    .font(.system(size: 13, weight: .heavy))
-                    .tracking(1)
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Circle().fill(accent).frame(width: 9, height: 9)
+                Text(verbatim: section.title)
+                    .font(.system(size: 15, weight: .bold))
+                Text(verbatim: rows.count.formatted())
+                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(accent.opacity(0.15), in: Capsule())
                     .foregroundStyle(accent)
-                Button("Add Shortcut", systemImage: "plus.circle") { edit(.row(section: index, row: nil)) }
+                Spacer(minLength: 0)
+                Button("Add Shortcut", systemImage: "plus") { edit(.row(section: index, row: nil)) }
                     .labelStyle(.iconOnly)
                     .buttonStyle(.borderless)
+                    .focusable(false)
                     .help("Add a shortcut to this section")
-                SwiftUI.Menu { menu() } label: { Image(systemName: "ellipsis.circle") }
+                SwiftUI.Menu { menu() } label: { Image(systemName: "ellipsis") }
                     .menuStyle(.borderlessButton)
                     .menuIndicator(.hidden)
                     .fixedSize()
             }
-            .foregroundStyle(.secondary)
-            .padding(.bottom, 4)
-            ForEach(rows, id: \.self) { row in
-                RowLine(
-                    shortcut: section.rows[row], accent: accent,
-                    edit: { edit(.row(section: index, row: row)) },
-                    delete: { delete(.row(section: index, row: row)) }
-                )
-            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(accent.opacity(0.12))
+
             if rows.isEmpty {
-                Text("No shortcuts yet.").foregroundStyle(.tertiary)
+                Text("No shortcuts yet.")
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity)
+                    .padding(16)
+            } else {
+                HStack(spacing: 16) {
+                    Text("Keys").frame(width: RowLine.keysWidth, alignment: .leading)
+                    Text("Description")
+                    Spacer(minLength: 0)
+                }
+                .font(.system(size: 11, weight: .semibold))
+                .textCase(.uppercase)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 7)
+                Divider()
+                ForEach(Array(rows.enumerated()), id: \.element) { position, row in
+                    if position > 0 { Divider().padding(.horizontal, 16) }
+                    RowLine(
+                        shortcut: section.rows[row], accent: accent,
+                        edit: { edit(.row(section: index, row: row)) },
+                        delete: { delete(.row(section: index, row: row)) }
+                    )
+                }
             }
         }
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .glassCard(cornerRadius: 16)
     }
 }
 
 // One shortcut. Edit by double-click, the pencil, or right-click.
 struct RowLine: View {
+    static let keysWidth: CGFloat = 190
+
     let shortcut: Shortcut
     let accent: Color
     let edit: () -> Void
@@ -255,13 +286,12 @@ struct RowLine: View {
     var body: some View {
         HStack(spacing: 16) {
             Text(verbatim: KeyText.spaced(shortcut.keys))
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(accent)
                 .environment(\.layoutDirection, .leftToRight) // keys read left to right, in Persian too
-                .frame(width: 190, alignment: .leading)
+                .frame(width: Self.keysWidth, alignment: .leading)
             Text(verbatim: shortcut.desc)
                 .font(.system(size: 14))
-                .foregroundStyle(.secondary)
                 .lineLimit(1)
             Spacer(minLength: 0)
             HStack(spacing: 10) {
@@ -272,9 +302,9 @@ struct RowLine: View {
             .buttonStyle(.borderless)
             .opacity(hovering ? 1 : 0)
         }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 8)
-        .background(hovering ? AnyShapeStyle(.quaternary.opacity(0.5)) : AnyShapeStyle(.clear), in: RoundedRectangle(cornerRadius: 6))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 9)
+        .background(hovering ? AnyShapeStyle(.quaternary.opacity(0.4)) : AnyShapeStyle(.clear))
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .onTapGesture(count: 2, perform: edit)
@@ -368,6 +398,34 @@ struct SectionEditor: View {
                 .disabled(section.title.trimmed.isEmpty)
             }
         }
+    }
+}
+
+// Liquid Glass on macOS 26; a frosted material before that.
+extension View {
+    @ViewBuilder func glassCard(cornerRadius: CGFloat) -> some View {
+        if #available(macOS 26, *) {
+            glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+        } else {
+            background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
+                .overlay(RoundedRectangle(cornerRadius: cornerRadius).strokeBorder(.separator))
+        }
+    }
+}
+
+// Soft Rosé Pine color behind the cards, so the glass has something to show.
+struct Backdrop: View {
+    var body: some View {
+        ZStack {
+            Rectangle().fill(.background)
+            Circle().fill(Color.rosePine("iris").opacity(0.22)).frame(width: 520).blur(radius: 120)
+                .offset(x: -220, y: -200)
+            Circle().fill(Color.rosePine("rose").opacity(0.20)).frame(width: 460).blur(radius: 120)
+                .offset(x: 260, y: 60)
+            Circle().fill(Color.rosePine("foam").opacity(0.18)).frame(width: 420).blur(radius: 120)
+                .offset(x: -60, y: 320)
+        }
+        .ignoresSafeArea()
     }
 }
 

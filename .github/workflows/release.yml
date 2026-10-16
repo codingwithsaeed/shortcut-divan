@@ -14,9 +14,9 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26 # Xcode 26: Liquid Glass
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Version
         run: |
@@ -60,7 +60,7 @@ jobs:
 
       - name: Keep as a workflow artifact
         if: github.event_name != 'release'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Shortcut-Divan-${{ env.VERSION }}
           path: dist/*
