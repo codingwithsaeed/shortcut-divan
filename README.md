@@ -5,6 +5,10 @@ English and Persian.
 
 [فارسی](#دیوان-میانبر)
 
+![The app](docs/app.png)
+
+![The widget in three sizes](docs/widget.png)
+
 ## What it does
 
 - **Desktop widget** in four sizes. Pick which section it shows; extra large shows two.
