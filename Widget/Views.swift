@@ -53,10 +53,10 @@ struct SectionView: View {
             HStack(spacing: 6) {
                 Circle().fill(accent).frame(width: style.font * 0.6, height: style.font * 0.6)
                 Text(verbatim: section.title)
-                    .font(.system(size: style.font + 2, weight: .bold))
+                    .font(.app(style.font + 2, .bold))
                     .lineLimit(1)
                 Text(verbatim: section.rows.count.formatted())
-                    .font(.system(size: style.font - 2, weight: .semibold).monospacedDigit())
+                    .font(.app(style.font - 2, .semibold).monospacedDigit())
                     .padding(.horizontal, 6)
                     .padding(.vertical, 1)
                     .background(accent.opacity(vibrant ? 0.12 : 0.18), in: Capsule())
@@ -99,7 +99,7 @@ struct SectionView: View {
     @ViewBuilder var controls: some View {
         if pages > 1 {
             Text(verbatim: "\((current + 1).formatted())/\(pages.formatted())")
-                .font(.system(size: style.font - 1, weight: .semibold).monospacedDigit())
+                .font(.app(style.font - 1, .semibold).monospacedDigit())
                 .foregroundStyle(.secondary)
                 .fixedSize()
             IconButton(symbol: "chevron.up", size: style.font, intent: TurnPage(key: key, delta: -1))
@@ -119,7 +119,7 @@ struct IconButton<Intent: AppIntent>: View {
     var body: some View {
         Button(intent: intent) {
             Image(systemName: symbol)
-                .font(.system(size: size - 2, weight: .semibold))
+                .font(.system(size: size - 0.5, weight: .semibold))
                 .frame(width: size + 10, height: size + 10)
                 .background(.fill.tertiary, in: Circle())
                 .overlay(Circle().strokeBorder(.separator, lineWidth: 0.5))
@@ -139,7 +139,7 @@ struct RowView: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(verbatim: row.desc)
-                .font(.system(size: size, weight: .medium))
+                .font(.app(size, .medium))
                 .lineLimit(1)
             Spacer(minLength: 4)
             Keycaps(keys: row.keys, accent: accent, size: size - 1, fill: fill)
